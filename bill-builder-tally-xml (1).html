@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TallySync XML</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --steel:#E3E8EC;
+  --panel:#FFFFFF;
+  --panel-2:#F5F8FA;
+  --ink:#132029;
+  --ink-soft:#5A6C79;
+  --line:#C7D2DA;
+  --line-2:#9DAEBA;
+  --weld:#1F5F8B;
+  --weld-soft:#E2EDF4;
+  --ok:#1C6A4E; --ok-bg:#DCEDE4;
+  --warn:#8A6512; --warn-bg:#F6EBD2;
+  --bad:#983326; --bad-bg:#F3DFDB;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; color:var(--ink); font-family:'Inter',sans-serif; min-height:100vh;
+  background-color:var(--steel);
+  background-image:
+    linear-gradient(to right, rgba(31,95,139,.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(31,95,139,.07) 1px, transparent 1px);
+  background-size:26px 26px;
+  padding:34px 18px 90px;
+}
+.wrap{max-width:1140px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{display:inline-block;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;letter-spacing:.03em;color:#fff;background:var(--weld);padding:5px 12px;border-radius:2px;margin:0 0 10px}
+h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:31px;letter-spacing:-.02em;margin:0 0 7px}
+header p{margin:0;color:var(--ink-soft);font-size:14px;line-height:1.55;max-width:680px}
+
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 16px}
+.tab{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 14px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink-soft);border-radius:2px;cursor:pointer}
+.tab:hover{border-color:var(--weld);color:var(--weld)}
+.tab.active{background:var(--weld);border-color:var(--weld);color:#fff}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:20px;margin-bottom:18px;display:none}
+.panel.open{display:block}
+.panel h3{font-family:'Space Grotesk',sans-serif;font-size:16px;margin:0 0 4px}
+.panel .desc{font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin:0 0 16px}
+.sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-soft);margin:20px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.sub:first-of-type{margin-top:0}
+
+input,select{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:6px 8px;border:1px solid var(--line);
+  border-radius:2px;background:var(--panel-2);color:var(--ink)}
+input:focus,select:focus{outline:2px solid var(--weld);outline-offset:-1px;background:#fff}
+textarea{width:100%;font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:8px;border:1px solid var(--line);
+  border-radius:2px;background:var(--panel-2);min-height:90px;resize:vertical}
+label.fld{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:3px;font-weight:500}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.grid2 input{width:100%}
+
+button{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 14px;border-radius:2px;cursor:pointer;
+  border:1px solid var(--line-2);background:var(--panel);color:var(--ink)}
+button:hover{border-color:var(--weld);color:var(--weld)}
+button.primary{background:var(--weld);border-color:var(--weld);color:#fff}
+button.primary:hover{background:#17486A;color:#fff}
+button.mini{padding:4px 8px;font-size:11px}
+button.danger{color:var(--bad);border-color:var(--line)}
+button.danger:hover{border-color:var(--bad);color:var(--bad)}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+table.grid{width:100%;border-collapse:collapse;font-size:12px}
+table.grid th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--ink-soft);border-bottom:1px solid var(--line-2);padding:6px 7px;font-weight:600}
+table.grid td{padding:5px 7px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.grid td.num{text-align:right;font-family:'IBM Plex Mono',monospace}
+table.grid tbody tr:hover{background:var(--panel-2)}
+.scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:2px}
+
+.drop{border:1.5px dashed var(--line-2);border-radius:3px;padding:26px;text-align:center;cursor:pointer;background:var(--panel-2)}
+.drop:hover,.drop.drag{border-color:var(--weld);background:var(--weld-soft)}
+.drop .big{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin-bottom:5px}
+.drop .small{font-size:12px;color:var(--ink-soft)}
+
+.note{font-size:12px;padding:9px 12px;border-radius:2px;border:1px solid var(--line);background:var(--panel-2);margin-top:12px;line-height:1.5}
+.note.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.note.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.note.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+
+.bill{background:var(--panel);border:1px solid var(--line);border-radius:3px;margin-bottom:16px;overflow:hidden}
+.bill.blocked{border-color:var(--bad)}
+.bill-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+  padding:13px 16px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.bill-head .who{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600}
+.bill-head .meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin-top:3px}
+.chip{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 7px;border-radius:2px;
+  border:1px solid var(--line-2);color:var(--ink-soft);background:var(--panel);margin-left:6px}
+.chip.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.chip.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.chip.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.bill-body{padding:6px 16px 16px}
+.totals{display:flex;justify-content:flex-end;padding-top:10px}
+.totals table{font-size:12.5px;font-family:'IBM Plex Mono',monospace;min-width:280px}
+.totals td{padding:3px 0}
+.totals td:last-child{text-align:right;padding-left:26px}
+.totals tr.grand td{font-weight:700;font-size:14px;border-top:1px solid var(--line-2);padding-top:7px}
+
+.exportbar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line-2);
+  padding:12px 18px;display:none;z-index:20;box-shadow:0 -3px 14px rgba(19,32,41,.10)}
+.exportbar.show{display:block}
+.exportbar .inner{max-width:1140px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.exportbar .status{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft)}
+
+.fix{background:var(--warn-bg);border:1px solid var(--warn);border-radius:2px;padding:12px 14px;margin:10px 0}
+.bulkbar{display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--weld-soft);border:1px solid var(--weld);
+  border-radius:2px;padding:8px 12px;margin-bottom:10px;font-size:12.5px}
+.bulkbar.show{display:flex}
+.bulkbar .count{font-weight:600;color:var(--weld)}
+.bulkedit{display:none;background:var(--panel-2);border:1px solid var(--line);border-radius:2px;padding:12px;margin-bottom:10px}
+.bulkedit.show{display:flex}
+.bulkedit{flex-wrap:wrap;gap:10px;align-items:end}
+.bulkedit .fld2{display:flex;flex-direction:column;gap:3px}
+.bulkedit .fld2 label{font-size:10px;color:var(--ink-soft)}
+.catsel{max-width:120px;font-size:11px}
+.fix h4{font-family:'Space Grotesk',sans-serif;font-size:13px;margin:0 0 4px;color:var(--warn)}
+.fix p{margin:0 0 10px;font-size:12px;color:var(--ink-soft);line-height:1.5}
+.fix .row{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:8px}
+.fix .row > div{display:flex;flex-direction:column}
+.muted{color:var(--ink-soft)}
+.mono{font-family:'IBM Plex Mono',monospace}
+.empty{text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13px;line-height:1.6}
+
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+  font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:10px 18px;border-radius:3px;z-index:40;
+  box-shadow:0 4px 16px rgba(19,32,41,.25);opacity:0;pointer-events:none;transition:opacity .15s}
+.toast.show{opacity:1}
+.confirmbar{position:fixed;left:0;right:0;bottom:0;background:var(--ink);color:#fff;padding:14px 18px;
+  z-index:41;display:none;box-shadow:0 -3px 14px rgba(19,32,41,.25)}
+.confirmbar.show{display:block}
+.confirmbar .inner{max-width:1140px;margin:0 auto;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+.confirmbar p{margin:0;font-size:13px;line-height:1.5;max-width:640px}
+.confirmbar .btns{display:flex;gap:8px;flex-shrink:0}
+.confirmbar button{font-family:'IBM Plex Mono',monospace}
+.confirmbar button.go{background:var(--bad);border-color:var(--bad);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <p class="eyebrow">TallySync XML</p>
+  <h1>TallySync XML</h1>
+  <p>Reads your rate sheet, applies your pricing rules, and writes a TallyPrime-ready XML. Voucher numbers stay with Tally — this file never sets one.</p>
+</header>
+
+<div id="storageBanner"></div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="build">Build bills</button>
+  <button class="tab" data-tab="items">Item master</button>
+  <button class="tab" data-tab="parties">Party master</button>
+  <button class="tab" data-tab="rules">Pricing rules</button>
+  <button class="tab" data-tab="settings">Tally settings</button>
+  <button class="tab" data-tab="log">Export log</button>
+</div>
+
+<!-- ============ BUILD ============ -->
+<div class="panel open" id="tab-build">
+  <div class="drop" id="drop">
+    <div class="big" id="dropBig">Drop your rate sheet here</div>
+    <div class="small" id="dropSmall">Same layout as the checker sheet — a row with just a customer name starts a block, then item code / qty / rate below it. Blank rate carries down from the row above.</div>
+  </div>
+  <div id="loadNote"></div>
+  <div class="btnrow" id="buildActions" style="display:none">
+    <div style="display:flex;flex-direction:column">
+      <label class="fld">Bill date</label>
+      <input type="date" id="billDate">
+    </div>
+    <div style="display:flex;flex-direction:column">
+      <label class="fld">&nbsp;</label>
+      <button id="recalcBtn">Recalculate</button>
+    </div>
+    <div style="display:flex;flex-direction:column">
+      <label class="fld">&nbsp;</label>
+      <button id="clearBtn" class="danger">Remove this file</button>
+    </div>
+  </div>
+  <div id="bills"></div>
+</div>
+
+<!-- ============ ITEMS ============ -->
+<div class="panel" id="tab-items">
+  <h3>Item master</h3>
+  <p class="desc">Your shorthand code on the left, the exact TallyPrime stock item name on the right. The Tally name must match your stock item letter for letter or the import will reject that line. Height and length are in feet and drive the sheet, roll, chainlink and sq.ft formulas. Add comma-separated variants for any other codes or spellings a rate sheet might use for the same item.</p>
+  <div class="btnrow" style="margin:0 0 12px">
+    <input id="itemSearch" placeholder="search code or name" style="width:230px">
+    <select id="itemCatFilter" style="width:190px"><option value="">All categories</option></select>
+    <button id="addItemBtn">Add item</button>
+    <button id="pasteItemsBtn">Paste from Excel</button>
+    <button id="itemExportBtn">Export to Excel</button>
+    <button id="clearItemsBtn" class="danger">Clear all items</button>
+  </div>
+  <div id="itemDupWarn"></div>
+  <div id="itemBulkBar"></div>
+  <div id="newItemBox" class="fix" style="display:none;margin-bottom:12px">
+    <h4>Add an item</h4>
+    <p>Code, Tally stock item name and category are all required. The Tally name must match your stock item letter for letter or the import will reject that line. Height and length are filled in from the code where it can be read — check them.</p>
+    <div class="row">
+      <div><label class="fld">Code *</label><input id="niCode" placeholder="e.g. 2x2x10x5" style="width:170px"></div>
+      <div><label class="fld">Tally stock item name *</label><input id="niName" placeholder="exact name in Tally" style="width:280px"></div>
+      <div><label class="fld">Category *</label><select id="niCat" style="width:190px"></select></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><label class="fld">Unit</label><input id="niUnit" style="width:80px"></div>
+      <div><label class="fld">Ht ft</label><input id="niH" style="width:70px"></div>
+      <div><label class="fld">Len ft</label><input id="niL" style="width:70px"></div>
+      <div><label class="fld">Bundle kg</label><input id="niBundle" style="width:80px"></div>
+      <div><label class="fld">HSN</label><input id="niHsn" style="width:100px"></div>
+      <div><label class="fld">GST %</label><input id="niGst" style="width:70px"></div>
+      <div><label class="fld">Other codes / spellings</label><input id="niVariants" placeholder="comma separated" style="width:200px"></div>
+    </div>
+    <div id="niWarn"></div>
+    <div class="btnrow" style="margin-top:10px"><button class="primary" id="niSave">Save item</button><button id="niCancel">Cancel</button></div>
+  </div>
+  <div id="pasteItemsBox" style="display:none;margin-bottom:12px">
+    <p class="desc">One item per line, tab or comma separated: <span class="mono">code, tally name, category, unit, height, length, bundle kg, HSN, GST%, variants</span>. Only code and Tally name are required. Variants are other codes/spellings for the same item — separate multiple with a comma inside that last field.</p>
+    <textarea id="pasteItemsText" placeholder="2x2x10x5&#9;GI Weldmesh 65mm x 65mm x 2.2mm x 5ft x 50ft&#9;roll_mesh&#9;ROLL&#9;5&#9;50&#9;&#9;&#9;&#9;2x2 10x5, 2X2X10X5 old"></textarea>
+    <div class="btnrow"><button class="primary" id="pasteItemsGo">Add these items</button><button id="pasteItemsCancel">Cancel</button></div>
+  </div>
+  <div class="scroll"><table class="grid" id="itemTable"></table></div>
+</div>
+
+<!-- ============ PARTIES ============ -->
+<div class="panel" id="tab-parties">
+  <h3>Party master</h3>
+  <p class="desc">Only the parties you actually bill need to be here. The name must match the TallyPrime ledger exactly. State decides the tax split — anything outside Kerala gets IGST instead of CGST and SGST. Add an alias if your rate sheet writes the name differently to Tally. Address, pincode and place are optional but recommended — without them Tally leaves the printed invoice's buyer address blank until someone reselects the party by hand.</p>
+  <div class="btnrow" style="margin:0 0 12px">
+    <input id="partySearch" placeholder="search party" style="width:250px">
+    <button id="addPartyBtn">Add party</button>
+    <button id="pastePartiesBtn">Paste from Tally export</button>
+    <button id="uploadPartiesBtn">Upload party list (Excel)</button>
+    <button id="clearPartiesBtn" class="danger">Clear all parties</button>
+  </div>
+  <div id="uploadPartiesBox" style="display:none;margin-bottom:12px">
+    <p class="desc">Excel with a <span class="mono">Name</span> column and a <span class="mono">GSTIN</span> column (any order, any extra columns are ignored). State is worked out automatically from each GSTIN's state code — no state column needed. Add <span class="mono">Address</span>, <span class="mono">Pincode</span> and/or <span class="mono">Place</span> columns to pull those in too. Existing parties are matched by name and updated; anything new is added.</p>
+    <div class="drop" id="partyDrop" style="padding:16px">
+      <div class="big" style="font-size:13px">Drop the party Excel here, or click to choose</div>
+    </div>
+    <input type="file" id="partyFileInput" accept=".xlsx,.xls" style="display:none">
+  </div>
+  <div id="newPartyBox" class="fix" style="display:none;margin-bottom:12px">
+    <h4>Add a party</h4>
+    <p>The Tally ledger name is required — it must match the ledger in TallyPrime letter for letter. Everything else is optional, but address, pincode and place are what stop Tally leaving the buyer address blank on the printed invoice.</p>
+    <div class="row">
+      <div><label class="fld">Tally ledger name *</label><input id="npName" placeholder="exact name in Tally" style="width:240px"></div>
+      <div><label class="fld">GSTIN</label><input id="npGstin" placeholder="32XXXXXXXXXXXZX" style="width:180px"></div>
+      <div><label class="fld">State</label><input id="npState" style="width:130px"></div>
+      <div><label class="fld">Alias on rate sheet</label><input id="npAlias" placeholder="how the sheet writes it" style="width:200px"></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><label class="fld">Address (as on invoice)</label><input id="npAddress" placeholder="line1, line2, phone" style="width:280px"></div>
+      <div><label class="fld">Pincode</label><input id="npPincode" style="width:100px"></div>
+      <div><label class="fld">Place</label><input id="npPlace" style="width:150px"></div>
+    </div>
+    <div id="npWarn"></div>
+    <div class="btnrow" style="margin-top:10px"><button class="primary" id="npSave">Save party</button><button id="npCancel">Cancel</button></div>
+  </div>
+  <div id="pastePartiesBox" style="display:none;margin-bottom:12px">
+    <p class="desc">One party per line, tab or comma separated: <span class="mono">ledger name, GSTIN, state, alias, address, pincode, place</span>. Export from Tally with Display &gt; List of Accounts &gt; Ledgers, or paste straight from a spreadsheet. Address, pincode and place are optional — they let bills print with the buyer's address without reselecting the party in Tally.</p>
+    <textarea id="pastePartiesText" placeholder="Arafa Traders&#9;32AAAAA0000A1Z5&#9;Kerala"></textarea>
+    <div class="btnrow"><button class="primary" id="pastePartiesGo">Add these parties</button><button id="pastePartiesCancel">Cancel</button></div>
+  </div>
+  <div id="partyWarn"></div>
+  <div id="partyBulkBar"></div>
+  <div class="scroll"><table class="grid" id="partyTable"></table></div>
+</div>
+
+<!-- ============ RULES ============ -->
+<div class="panel" id="tab-rules">
+  <h3>Pricing rules</h3>
+  <p class="desc">Rates on your sheet are always tax-inclusive, so every formula divides the tax back out and rounds up. Length is the fallback used when an item has no length of its own.</p>
+  <table class="grid" id="rulesTable"></table>
+  <div class="sub">Bundle weights</div>
+  <p class="desc">For bundle items, the quantity on your sheet is a count of bundles. Billed weight is that count times the weight below.</p>
+  <table class="grid" id="bundleTable"></table>
+  <div class="btnrow"><button id="addBundleBtn">Add bundle weight</button></div>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div class="panel" id="tab-settings">
+  <h3>Tally settings</h3>
+  <p class="desc">These names go straight into the XML. Each one must already exist in your company or Tally will reject the voucher on import.</p>
+  <div class="sub">Company</div>
+  <div class="grid2">
+    <div><label class="fld">Company name in Tally</label><input id="s_company"></div>
+    <div><label class="fld">Your GSTIN</label><input id="s_gstin"></div>
+    <div><label class="fld">Your state</label><input id="s_state"></div>
+    <div><label class="fld">Voucher type</label><input id="s_vtype"></div>
+    <div><label class="fld">Godown</label><input id="s_godown"></div>
+  </div>
+  <div class="sub">Sales ledgers — 18% items</div>
+  <div class="grid2">
+    <div><label class="fld">Within Kerala</label><input id="s_salesLocal18"></div>
+    <div><label class="fld">Outside Kerala</label><input id="s_salesInter18"></div>
+  </div>
+  <div class="sub">Sales ledgers — 5% items (Velcro / Shade Net)</div>
+  <div class="grid2">
+    <div><label class="fld">Within Kerala</label><input id="s_salesLocal5"></div>
+    <div><label class="fld">Outside Kerala</label><input id="s_salesInter5" placeholder="not set yet"></div>
+  </div>
+  <div class="sub">Tax &amp; rounding</div>
+  <div class="grid2">
+    <div><label class="fld">CGST ledger</label><input id="s_cgst"></div>
+    <div><label class="fld">SGST ledger</label><input id="s_sgst"></div>
+    <div><label class="fld">IGST ledger</label><input id="s_igst"></div>
+    <div><label class="fld">Round off ledger</label><input id="s_round"></div>
+    <div><label class="fld">Rounding method</label><select id="s_roundMethod">
+      <option value="upward">Upward — always to the next rupee</option>
+      <option value="normal">Normal — to the nearest rupee</option>
+      <option value="downward">Downward — always to the rupee below</option>
+    </select></div>
+  </div>
+  <div class="note">Leave the round off ledger blank to export exact paise instead of rounding to the rupee.</div>
+  <div class="btnrow"><button class="primary" id="saveSettings">Save settings</button></div>
+
+  <div class="sub">Backup &amp; restore</div>
+  <p class="desc">Everything this tool knows — items, parties, pricing rules, Tally settings, and the export log — in one file. Download it before switching computers or browsers, sharing this tool with a teammate, or moving from a downloaded copy into a Claude chat. Restoring replaces whatever is currently loaded, so grab a fresh backup first if you're not sure.</p>
+  <div class="btnrow">
+    <button class="primary" id="fullBackupBtn">Download full backup</button>
+    <button id="fullRestoreBtn">Restore from backup</button>
+  </div>
+</div>
+
+<!-- ============ LOG ============ -->
+<div class="panel" id="tab-log">
+  <h3>Export log</h3>
+  <p class="desc">Every bill this tool has written to XML. Because Tally numbers vouchers itself, importing the same file twice creates a second invoice rather than an error — this list is what catches that before it happens.</p>
+  <div class="scroll"><table class="grid" id="logTable"></table></div>
+  <div class="btnrow"><button class="danger" id="clearLogBtn">Clear log</button></div>
+</div>
+
+</div>
+
+<div class="exportbar" id="exportBar">
+  <div class="inner">
+    <div class="status" id="exportStatus"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="exportCsvBtn">Download summary CSV</button>
+      <button class="primary" id="exportXmlBtn">Download Tally XML</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="toast" id="toast"></div>
+<div class="confirmbar" id="confirmBar">
+  <div class="inner">
+    <p id="confirmText"></p>
+    <div class="btns">
+      <button id="confirmNo">Cancel</button>
+      <button class="go" id="confirmYes">Confirm</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+<input type="file" id="restoreInput" accept=".json" style="display:none">
+
+<script>
+/* ============================ STATE ============================ */
+let rules = {
+  sheet_pcs:   { label:'Sheet (PCS)',            dim:true,  lengthFt:12, tax:18, decimals:0, unit:'PCS'  },
+  roll_mesh:   { label:'Roll mesh (ROLL)',       dim:true,  lengthFt:50, tax:18, decimals:0, unit:'ROLL' },
+  chainlink:   { label:'GI Chainlink (ROLL)',    dim:true,  lengthFt:50, tax:18, decimals:0, unit:'ROLL' },
+  sqft:        { label:'Weldmesh by sq.ft',      dim:false, lengthFt:50, tax:18, decimals:2, unit:'SQFT', area:true },
+  kg_bundle:   { label:'Wire / nails in bundles',dim:false, tax:18, decimals:2, unit:'KG', bundled:true },
+  kg_direct:   { label:'Loose weight (KG)',      dim:false, tax:18, decimals:2, unit:'KG' },
+  flat:        { label:'Direct / flat rate',     dim:false, tax:18, decimals:2, unit:'NOS' },
+  flat_5:      { label:'5% items (Velcro / Shade Net)', dim:false, tax:5, decimals:0, unit:'NOS' }
+};
+let bundleRules = [
+  { label:'First Wire / Wire Nail', match:'firstwire', weight:25 },
+  { label:'Wire Nail (alt naming)', match:'wirenail',  weight:25 },
+  { label:'GI Wire 16g', match:'giwire16g', weight:25 },
+  { label:'GI Wire 18g', match:'giwire18g', weight:25 },
+  { label:'GI Wire 20g', match:'giwire20g', weight:25 },
+  { label:'GI Wire 22g', match:'giwire22g', weight:25 },
+  { label:'GI Wire 24g', match:'giwire24g', weight:25 },
+  { label:'MS Wire 18g', match:'mswire18g', weight:25 },
+  { label:'MS Wire',     match:'mswire',    weight:25 },
+  { label:'Tata MS / binding wire', match:'tatabindingwire', weight:30 }
+];
+let settings = {
+  company:'',
+  gstin:'',
+  state:'Kerala',
+  vtype:'SALES GST',
+  godown:'',
+  salesLocal18:'SALES GST @ 18%',
+  salesInter18:'Interstate Sale 18%',
+  salesLocal5:'SALES GST@5%',
+  salesInter5:'',
+  cgst:'CGST', sgst:'SGST', igst:'IGST',
+  round:'Round Off',
+  roundMethod:'upward'
+};
+let items = [];
+let parties = [];
+let exportLog = [];
+let blocks = null;      // parsed sheet
+let bills = [];         // computed
+let sheetName = '';
+
+/* ============================ HELPERS ============================ */
+const $ = id => document.getElementById(id);
+/* In-page replacements for confirm()/alert() — native dialogs can be silently
+   blocked in a sandboxed preview, which made Clear Log look like it did nothing. */
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._h); toast._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function askConfirm(msg, onYes){
+  const bar = $('confirmBar');
+  $('confirmText').textContent = msg;
+  bar.classList.add('show');
+  const cleanup = () => { bar.classList.remove('show'); yesBtn.removeEventListener('click', onYesClick); noBtn.removeEventListener('click', onNoClick); };
+  const yesBtn = $('confirmYes'), noBtn = $('confirmNo');
+  const onYesClick = () => { cleanup(); onYes(); };
+  const onNoClick = () => { cleanup(); };
+  yesBtn.addEventListener('click', onYesClick);
+  noBtn.addEventListener('click', onNoClick);
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+function tight(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function ceilTo(v,d){ const f=Math.pow(10,d); return Math.ceil((v-1e-9)*f)/f; }
+function money(n){ return (Math.round(n*100)/100).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function qtyFmt(n){ const r=Math.round(n*1000)/1000; return Number.isInteger(r)?String(r):String(r); }
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function stamp(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+function isoToTally(iso){ return (iso||'').replace(/-/g,''); }
+
+/* ============================ STORAGE ============================ */
+let storageOK = null;   // null = untested, true/false once known
+let saveWarned = false;
+
+async function save(){
+  const payload = { rules, bundleRules, settings, items, parties, exportLog };
+  try{
+    if(!window.storage || typeof window.storage.set !== 'function') throw new Error('no storage');
+    const r = await window.storage.set('jwnc_billbuilder', JSON.stringify(payload), false);
+    if(r === null) throw new Error('write refused');
+    storageOK = true;
+    renderStorageBanner();
+    return true;
+  }catch(e){
+    storageOK = false;
+    renderStorageBanner();
+    if(!saveWarned){
+      saveWarned = true;
+      toast("Changes aren't being saved — download a backup before closing.");
+    }
+    return false;
+  }
+}
+
+function renderStorageBanner(){
+  const el = document.getElementById('storageBanner');
+  if(!el) return;
+  el.innerHTML = storageOK === false ? `<div class="note bad">
+    <b>Nothing is being saved.</b> This copy can't reach persistent storage, so edits, deletions and
+    new items will all come back as soon as the page reloads. Use <b>Tally settings &rarr; Download full backup</b>
+    before you close this tab, and restore it next time. Building this tool inside a Claude chat gives you
+    saving that works across sessions.</div>` : '';
+}
+async function load(){
+  try{
+    const r = await window.storage.get('jwnc_billbuilder', false);
+    if(r && r.value){
+      const p = JSON.parse(r.value);
+      if(p.rules) rules = Object.assign(rules, p.rules);
+      if(p.bundleRules) bundleRules = p.bundleRules;
+      if(p.settings) settings = Object.assign(settings, p.settings);
+      if(Array.isArray(p.items) && p.items.length) items = p.items;
+      if(Array.isArray(p.parties)) { parties = p.parties; selectedParties.clear(); }
+      if(Array.isArray(p.exportLog)) exportLog = p.exportLog;
+    }
+  }catch(e){}
+  // Probe storage once at startup so the warning appears before any data is lost.
+  try{
+    if(!window.storage || typeof window.storage.set !== 'function') throw new Error('no storage');
+    const t = await window.storage.set('jwnc_probe', '1', false);
+    storageOK = (t !== null);
+  }catch(e){ storageOK = false; }
+  renderAll();
+  renderStorageBanner();
+}
+
+/* ============================ LOOKUPS ============================ */
+// Normalises the shorthand people actually type: stray spaces around the x,
+// "lit" vs "lite", 1/2 written as .5, curly quotes, trailing ft marks.
+function normCode(s){
+  let v = String(s||'').toLowerCase();
+  v = v.replace(/[\u2018\u2019\u201c\u201d]/g, "'").replace(/[\u00d7\u2715]/g,'x');
+  v = v.replace(/\bhalf\s*inch\b/g,'1/2x1/2');
+  v = v.replace(/(\d)\s*\/\s*(\d)/g,'$1/$2');       // 1 / 2 -> 1/2
+  v = v.replace(/\b0?\.5\b/g,'1/2');                  // .5 -> 1/2
+  v = v.replace(/\s*x\s*/g,'x');                      // 1 x 1 -> 1x1
+  v = v.replace(/\blit\b/g,'lite').replace(/\bhvy\b/g,'heavy').replace(/\bblu\b/g,'blue');
+  v = v.replace(/\bgauge\b/g,'g').replace(/(\d)\s*g(?=x|\s|$|[^a-z0-9])/g,'$1');   // 10g and 10gx3 -> 10
+  v = v.replace(/\bfeet\b/g,'ft').replace(/'/g,'ft');
+  v = v.replace(/[^a-z0-9/.]+/g,' ').replace(/\s+/g,' ').trim();
+  return v;
+}
+
+function itemVariants(it){
+  return String(it.variants||'').split(',').map(v => tight(v)).filter(Boolean);
+}
+function findItem(code){
+  const t = tight(code);
+  if(!t) return null;
+  // Same reasoning as findParty: a half-finished item row with no code and no Tally
+  // name can only ever produce a bad match or an XML line Tally will reject, so it
+  // never takes part in matching.
+  const pool = items.filter(i => tight(i.code) || tight(i.name));
+
+  let hit = pool.find(i => tight(i.code) === t);            // exact code
+  if(hit) return hit;
+  hit = pool.find(i => tight(i.name) === t);                // exact Tally name
+  if(hit) return hit;
+  hit = pool.find(i => itemVariants(i).includes(t));         // manual variant/alias
+  if(hit) return hit;
+
+  const n = normCode(code);
+  if(!n) return null;
+  const byNorm = pool.filter(i => normCode(i.code) === n);  // normalised code
+  if(byNorm.length === 1) return byNorm[0];
+  if(byNorm.length > 1) return byNorm[0];
+
+  const byNormName = pool.filter(i => normCode(i.name) === n);
+  if(byNormName.length === 1) return byNormName[0];
+
+  const byNormVariant = pool.filter(i => itemVariants(i).some(v => normCode(v) === n));
+  if(byNormVariant.length === 1) return byNormVariant[0];
+
+  // last resort: a single unambiguous containment match, never a guess among many
+  const nt = n.replace(/\s+/g,'');
+  const loose = pool.filter(i => {
+    const c = normCode(i.code).replace(/\s+/g,'');
+    return c && (c === nt || c.startsWith(nt) || nt.startsWith(c));
+  });
+  return loose.length === 1 ? loose[0] : null;
+}
+// Character-bigram overlap. Handles abbreviations and missing location suffixes
+// ("Arafa Traders" vs "Arafa Traders, Angamaly, EKM") without matching two
+// genuinely different customers that merely share a common word.
+function bigrams(s){
+  const v = ' ' + norm(s) + ' ';
+  const out = new Set();
+  for(let i=0;i<v.length-1;i++) out.add(v.slice(i,i+2));
+  return out;
+}
+function dice(a,b){
+  if(!a.size || !b.size) return 0;
+  let hits = 0; a.forEach(g => { if(b.has(g)) hits++; });
+  return (2*hits)/(a.size+b.size);
+}
+
+function findParty(name){
+  const t = tight(name);
+  if(!t) return null;
+  // A party with a blank name must never take part in matching. Left in, its empty
+  // name is a prefix of every customer ("".startsWith test passes for anything), so a
+  // single stray blank row silently becomes the "unique prefix match" for every bill
+  // and every heading renders empty. Filtered here as well as blocked at entry.
+  const pool = parties.filter(p => tight(p.name));
+
+  let hit = pool.find(p => tight(p.name) === t);
+  if(hit) return hit;
+  hit = pool.find(p => p.alias && tight(p.alias) === t);
+  if(hit) return hit;
+
+  // one side being a clean prefix of the other, uniquely
+  const pref = pool.filter(p => {
+    const pn = tight(p.name);
+    return pn.startsWith(t) || t.startsWith(pn);
+  });
+  if(pref.length === 1) return pref[0];
+
+  const want = bigrams(name);
+  let best=null, bestScore=0, second=0;
+  pool.forEach(p => {
+    const sc = Math.max(dice(want, bigrams(p.name)),
+                        p.alias ? dice(want, bigrams(p.alias)) : 0);
+    if(sc > bestScore){ second = bestScore; bestScore = sc; best = p; }
+    else if(sc > second){ second = sc; }
+  });
+  // needs to be both strong and clearly ahead of the runner-up
+  return (bestScore >= 0.68 && bestScore - second >= 0.06) ? best : null;
+}
+function bundleWeightFor(it){
+  if(it.bundle) return Number(it.bundle);
+  const t = tight(it.name + ' ' + it.code);
+  const hit = bundleRules.find(r => t.includes(r.match));
+  return hit ? hit.weight : null;
+}
+function isLocal(party){ return tight(party.state) === tight(settings.state); }
+const GST_STATE_CODES = {
+'01':'Jammu and Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh','05':'Uttarakhand',
+'06':'Haryana','07':'Delhi','08':'Rajasthan','09':'Uttar Pradesh','10':'Bihar','11':'Sikkim',
+'12':'Arunachal Pradesh','13':'Nagaland','14':'Manipur','15':'Mizoram','16':'Tripura','17':'Meghalaya',
+'18':'Assam','19':'West Bengal','20':'Jharkhand','21':'Odisha','22':'Chhattisgarh','23':'Madhya Pradesh',
+'24':'Gujarat','26':'Dadra and Nagar Haveli and Daman and Diu','27':'Maharashtra','28':'Andhra Pradesh (Old)',
+'29':'Karnataka','30':'Goa','31':'Lakshadweep','32':'Kerala','33':'Tamil Nadu','34':'Puducherry',
+'35':'Andaman and Nicobar Islands','36':'Telangana','37':'Andhra Pradesh','38':'Ladakh'
+};
+function stateFromGstin(g){
+  const code = String(g||'').trim().slice(0,2);
+  return GST_STATE_CODES[code] || null;
+}
+
+function salesLedgerFor(gstRate, local){
+  const r5 = Math.abs(Number(gstRate) - 5) < 0.01;
+  if(r5) return local ? settings.salesLocal5 : settings.salesInter5;
+  return local ? settings.salesLocal18 : settings.salesInter18;
+}
+
+/* Guess category / dimensions when a brand new code shows up */
+function guessSpec(code){
+  const s = String(code||'');
+  const low = s.toLowerCase();
+  const fts = [...s.matchAll(/(\d+(?:\.\d+)?)\s*ft/gi)].map(m => parseFloat(m[1]));
+  const out = { cat:'flat', h:null, l:null, unit:'NOS', bundle:null };
+
+  if(low.includes('velcro') || low.includes('shade net')) { out.cat='flat_5'; return out; }
+  if(low.includes('nail') || low.includes('wire')){
+    out.cat = 'kg_bundle'; out.unit='KG'; return out;
+  }
+  if(low.includes('chain') || low.includes(' ch ') || low.startsWith('gi ch')){
+    out.cat='chainlink'; out.unit='ROLL';
+    if(fts.length >= 2){ out.h = fts[0]; out.l = fts[1]; }
+    else if(fts.length === 1){ out.h = fts[0]; out.l = 50; }
+    return out;
+  }
+  // shorthand a x b x c x d  (openings may be fractions)
+  const parts = s.split(/\s+/)[0].split(/x/i);
+  const nums = parts.map(p => {
+    const f = p.match(/^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/);
+    if(f) return parseFloat(f[1])/parseFloat(f[2]);
+    const n = parseFloat(p);
+    return isNaN(n) ? null : n;
+  });
+  const hasMM = /\d\s*mm/i.test(s);
+  if(nums.length >= 4 && nums[2] !== null && nums[3] !== null){
+    if(hasMM){ out.cat='sheet_pcs'; out.unit='PCS'; out.l = nums[2]; out.h = nums[3]; }
+    else { out.cat='roll_mesh'; out.unit='ROLL'; out.h = nums[3]; out.l = fts.length ? fts[fts.length-1] : 50; }
+    return out;
+  }
+  if(fts.length >= 2){ out.cat='roll_mesh'; out.unit='ROLL'; out.h=fts[0]; out.l=fts[1]; }
+  return out;
+}
+
+/* ============================ PRICING ============================ */
+function priceRow(it, qty, quotedRate){
+  const rule = rules[it.cat] || rules.flat;
+  const gst  = it.gst != null ? Number(it.gst) : rule.tax;
+  const div  = 1 + (rule.tax/100);
+  const h = it.h != null ? Number(it.h) : null;
+  const l = it.l != null ? Number(it.l) : (rule.lengthFt != null ? rule.lengthFt : null);
+
+  let billedQty = qty, rate = null, unit = it.unit || rule.unit, issue = null, basis = '';
+
+  if(rule.dim){
+    if(h == null || l == null){ issue = 'Height or length missing — set them on the item.'; }
+    else { rate = ceilTo((h * l * quotedRate) / div, rule.decimals); basis = `${h}ft × ${l}ft × ₹${quotedRate} ÷ ${div}`; }
+  } else if(rule.area){
+    if(h == null || l == null){ issue = 'Height or length missing — needed to work out sq.ft.'; }
+    else { billedQty = qty * h * l; rate = ceilTo(quotedRate/div, rule.decimals); basis = `${qty} × ${h}ft × ${l}ft = ${qtyFmt(billedQty)} sq.ft`; }
+  } else if(rule.bundled){
+    const w = bundleWeightFor(it);
+    if(!w){ issue = 'No bundle weight for this item — add one under Pricing rules or on the item.'; }
+    else { billedQty = qty * w; rate = ceilTo(quotedRate/div, rule.decimals); basis = `${qty} bundles × ${w}kg = ${qtyFmt(billedQty)} kg`; }
+  } else {
+    rate = ceilTo(quotedRate/div, rule.decimals);
+  }
+
+  const amount = (rate != null) ? Math.round(rate * billedQty * 100)/100 : null;
+  return { rule, gst, billedQty, rate, amount, unit, issue, basis };
+}
+
+function buildBills(){
+  const date = $('billDate').value || todayISO();
+  bills = (blocks||[]).map(block => {
+    const party = findParty(block.customerName);
+    const lines = [];
+    const missingItems = [];
+    block.rows.forEach((r, rowIdx) => {
+      if(r.qty === 0 || r.qty === null) return;   // not dispatched / no qty
+      const it = findItem(r.code);
+      if(!it){ missingItems.push(r.code); lines.push({ rowIdx, code:r.code, missing:true, qty:r.qty, quotedRate:r.rate }); return; }
+      if(r.rate === null || isNaN(r.rate)){
+        lines.push({ rowIdx, code:r.code, item:it, qty:r.qty, quotedRate:null, issue:'No rate on the sheet for this row.' });
+        return;
+      }
+      const p = priceRow(it, r.qty, r.rate);
+      lines.push({ rowIdx, code:r.code, item:it, qty:r.qty, quotedRate:r.rate, ...p });
+    });
+
+    const priced = lines.filter(l => l.amount != null);
+    const taxable = Math.round(priced.reduce((s,l) => s + l.amount, 0) * 100)/100;
+
+    // tax grouped by rate so an 18% and a 5% line can share one bill
+    const byRate = {};
+    priced.forEach(l => { byRate[l.gst] = (byRate[l.gst]||0) + l.amount; });
+    let taxTotal = 0;
+    const taxParts = Object.keys(byRate).map(k => {
+      const t = Math.round(byRate[k] * (Number(k)/100) * 100)/100;
+      taxTotal += t; return { gst:Number(k), base:byRate[k], tax:t };
+    });
+    taxTotal = Math.round(taxTotal*100)/100;
+
+    const local = party ? isLocal(party) : true;
+    const half  = Math.round(taxTotal/2*100)/100;
+    const cgst  = local ? half : 0;
+    const sgst  = local ? Math.round((taxTotal-half)*100)/100 : 0;
+    const igst  = local ? 0 : taxTotal;
+
+    const beforeRound = Math.round((taxable + taxTotal)*100)/100;
+    const doRound = !!settings.round;
+    const rm = settings.roundMethod || 'upward';
+    const grand = doRound
+      ? (rm === 'upward' ? Math.ceil(beforeRound - 1e-9)
+        : rm === 'downward' ? Math.floor(beforeRound + 1e-9)
+        : Math.round(beforeRound))
+      : beforeRound;
+    const roundOff = Math.round((grand - beforeRound)*100)/100;
+
+    // Signature covers the actual goods, so two different bills to the same
+    // party on the same day are not flagged — only a genuine repeat is.
+    const sig = priced.map(l => `${tight(l.code)}:${l.billedQty}:${l.rate}`).sort().join('|');
+    const dupe = party ? exportLog.find(e =>
+      tight(e.party) === tight(party.name) && e.date === date && e.sig && e.sig === sig) : null;
+    const blocked = !party || missingItems.length > 0 || lines.some(l => l.issue) || priced.length === 0;
+
+    return { block, party, date, lines, missingItems, taxable, taxParts, cgst, sgst, igst, local,
+             roundOff, grand, blocked, dupe, sig, selected:!blocked };
+  });
+  renderBills();
+}
+
+/* ============================ SHEET PARSING ============================ */
+/* A row with only a name = new customer. Rows under it are code / qty / rate.
+   Blank rate inherits the row above, same as the rate sheet is written by hand. */
+function parseSheet(buf){
+  const wb = XLSX.read(buf, { type:'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
+  const out = [];
+  let cur = null, lastRate = null;
+  rows.forEach(r => {
+    const a = r[0], b = r[1], c = r[2];
+    if(a == null || String(a).trim() === '') return;
+    if((b == null || b === '') && (c == null || c === '')){
+      cur = { customerName:String(a).trim(), rows:[] }; out.push(cur); lastRate = null; return;
+    }
+    if(!cur) return;
+    let qty = (b == null || b === '') ? null : Number(b);
+    let rate = (c == null || c === '') ? null : Number(c);
+    if(rate === null || isNaN(rate)) rate = lastRate; else lastRate = rate;
+    cur.rows.push({ code:String(a).trim(), qty:(qty!==null && !isNaN(qty))?qty:null, rate:rate });
+  });
+  return out;
+}
+
+/* ============================ XML ============================ */
+function ledgerEntry(name, amount, isDebit, extra, isParty){
+  // LEDGERENTRIES.LIST (not ALLLEDGERENTRIES.LIST) — confirmed against a real
+  // Tally invoice-mode export. In Invoice Voucher View with inventory entries
+  // Tally reads this tag; ALLLEDGERENTRIES.LIST is silently ignored here,
+  // which left every imported voucher with no debit side at all.
+  return `<LEDGERENTRIES.LIST>
+<LEDGERNAME>${esc(name)}</LEDGERNAME>
+<ISDEEMEDPOSITIVE>${isDebit?'Yes':'No'}</ISDEEMEDPOSITIVE>
+<LEDGERFROMITEM>No</LEDGERFROMITEM>
+<REMOVEZEROENTRIES>No</REMOVEZEROENTRIES>
+<ISPARTYLEDGER>${isParty?'Yes':'No'}</ISPARTYLEDGER>
+<ISLASTDEEMEDPOSITIVE>${isDebit?'Yes':'No'}</ISLASTDEEMEDPOSITIVE>
+<AMOUNT>${isDebit ? (-Math.abs(amount)).toFixed(2) : Math.abs(amount).toFixed(2)}</AMOUNT>${extra||''}
+</LEDGERENTRIES.LIST>`;
+}
+
+function billToXml(bill, idx){
+  const billRef = `${isoToTally(bill.date)}-${(idx||0)+1}`;
+  const inv = bill.lines.filter(l => l.amount != null).map(l => {
+    const q = `${qtyFmt(l.billedQty)} ${l.unit}`;
+    const salesLedger = salesLedgerFor(l.gst, bill.local);
+    return `<ALLINVENTORYENTRIES.LIST>
+<STOCKITEMNAME>${esc(l.item.name)}</STOCKITEMNAME>
+<ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+<RATE>${l.rate}/${esc(l.unit)}</RATE>
+<AMOUNT>${l.amount.toFixed(2)}</AMOUNT>
+<ACTUALQTY>${q}</ACTUALQTY>
+<BILLEDQTY>${q}</BILLEDQTY>${l.item.hsn?`\n<HSNCODE>${esc(l.item.hsn)}</HSNCODE>`:''}
+<BATCHALLOCATIONS.LIST>
+<GODOWNNAME>${esc(settings.godown)}</GODOWNNAME>
+<BATCHNAME>Primary Batch</BATCHNAME>
+<AMOUNT>${l.amount.toFixed(2)}</AMOUNT>
+<ACTUALQTY>${q}</ACTUALQTY>
+<BILLEDQTY>${q}</BILLEDQTY>
+</BATCHALLOCATIONS.LIST>
+<ACCOUNTINGALLOCATIONS.LIST>
+<LEDGERNAME>${esc(salesLedger)}</LEDGERNAME>
+<ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+<AMOUNT>${l.amount.toFixed(2)}</AMOUNT>
+</ACCOUNTINGALLOCATIONS.LIST>
+</ALLINVENTORYENTRIES.LIST>`;
+  }).join('\n');
+
+  // Tax is intentionally left out of the export — party amount equals the
+  // taxable total only, so the voucher always balances on import. CGST/SGST/
+  // IGST/Round Off get added by billing staff in Tally itself, alongside the
+  // e-way bill and e-invoice details they already fill in by hand per bill.
+  // BILLALLOCATIONS.LIST is required here: your party ledgers are bill-wise
+  // tracked (confirmed from a real export), and without a bill reference
+  // Tally can't settle the debit side even though the amount is correct.
+  const billExtra =
+    (bill.party.gstin ? `\n<PARTYGSTIN>${esc(bill.party.gstin)}</PARTYGSTIN>` : '') +
+    `\n<BILLALLOCATIONS.LIST>\n<NAME>${esc(billRef)}</NAME>\n<BILLTYPE>New Ref</BILLTYPE>\n<AMOUNT>${(-bill.taxable).toFixed(2)}</AMOUNT>\n</BILLALLOCATIONS.LIST>`;
+  let led = ledgerEntry(bill.party.name, bill.taxable, true, billExtra, true);
+
+  // Tally only fills the address/pincode/place shown on the printed invoice
+  // from the ledger master when the party field is re-entered by hand — a
+  // straight XML import leaves them blank. Sending them ourselves (split on
+  // commas/newlines the way Tally's own ADDRESS.LIST does) avoids that step.
+  const addressLines = String(bill.party.address||'')
+    .split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
+
+  return `<TALLYMESSAGE xmlns:UDF="TallyUDF">
+<VOUCHER VCHTYPE="${esc(settings.vtype)}" ACTION="Create" OBJVIEW="Invoice Voucher View">
+${addressLines.length ? `<ADDRESS.LIST TYPE="String">\n${addressLines.map(l => `<ADDRESS>${esc(l)}</ADDRESS>`).join('\n')}\n</ADDRESS.LIST>` : ''}
+${addressLines.length ? `<BASICBUYERADDRESS.LIST TYPE="String">\n${addressLines.map(l => `<BASICBUYERADDRESS>${esc(l)}</BASICBUYERADDRESS>`).join('\n')}\n</BASICBUYERADDRESS.LIST>` : ''}
+<DATE>${isoToTally(bill.date)}</DATE>
+<EFFECTIVEDATE>${isoToTally(bill.date)}</EFFECTIVEDATE>
+<VOUCHERTYPENAME>${esc(settings.vtype)}</VOUCHERTYPENAME>
+<PARTYLEDGERNAME>${esc(bill.party.name)}</PARTYLEDGERNAME>
+<PARTYNAME>${esc(bill.party.name)}</PARTYNAME>
+<PARTYMAILINGNAME>${esc(bill.party.name)}</PARTYMAILINGNAME>
+<BASICBUYERNAME>${esc(bill.party.name)}</BASICBUYERNAME>
+<BASICBASEPARTYNAME>${esc(bill.party.name)}</BASICBASEPARTYNAME>${bill.party.pincode?`\n<PARTYPINCODE>${esc(bill.party.pincode)}</PARTYPINCODE>`:''}${bill.party.place?`\n<BILLTOPLACE>${esc(bill.party.place)}</BILLTOPLACE>\n<SHIPTOPLACE>${esc(bill.party.place)}</SHIPTOPLACE>`:''}
+<PLACEOFSUPPLY>${esc(bill.party.state||settings.state)}</PLACEOFSUPPLY>
+<STATENAME>${esc(bill.party.state||settings.state)}</STATENAME>
+<COUNTRYOFRESIDENCE>India</COUNTRYOFRESIDENCE>
+<GSTREGISTRATIONTYPE>Regular</GSTREGISTRATIONTYPE>
+<CMPGSTREGISTRATIONTYPE>Regular</CMPGSTREGISTRATIONTYPE>${settings.gstin?`\n<CMPGSTIN>${esc(settings.gstin)}</CMPGSTIN>`:''}
+<VCHENTRYMODE>Item Invoice</VCHENTRYMODE>
+<DIFFACTUALQTY>No</DIFFACTUALQTY>
+<ISCOMMONPARTY>No</ISCOMMONPARTY>
+<ISDELETED>No</ISDELETED>
+<ISCANCELLED>No</ISCANCELLED>
+<ISOPTIONAL>No</ISOPTIONAL>
+<PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
+<ISINVOICE>Yes</ISINVOICE>
+<HASCASHFLOW>No</HASCASHFLOW>${bill.party.gstin?`\n<CONSIGNEEGSTIN>${esc(bill.party.gstin)}</CONSIGNEEGSTIN>`:''}
+<CONSIGNEEMAILINGNAME>${esc(bill.party.name)}</CONSIGNEEMAILINGNAME>${bill.party.pincode?`\n<CONSIGNEEPINCODE>${esc(bill.party.pincode)}</CONSIGNEEPINCODE>`:''}
+<CONSIGNEESTATENAME>${esc(bill.party.state||settings.state)}</CONSIGNEESTATENAME>
+<CONSIGNEECOUNTRYNAME>India</CONSIGNEECOUNTRYNAME>
+${led}
+${inv}
+</VOUCHER>
+</TALLYMESSAGE>`;
+}
+
+// Blocks an export that would produce XML Tally must reject — a blank ledger
+// or godown name arrives as an empty tag and fails the import.
+function settingsProblems(chosen){
+  const p = [];
+  if(!settings.vtype.trim()) p.push('Voucher type is blank in Tally settings.');
+  if(!settings.godown.trim()) p.push('Godown is blank in Tally settings.');
+  if(!settings.company.trim()) p.push('Company name is blank in Tally settings.');
+  const needed = new Set();
+  chosen.forEach(b => b.lines.filter(l => l.amount != null)
+    .forEach(l => needed.add(salesLedgerFor(l.gst, b.local) || '')));
+  if(needed.has('')){
+    const cases = new Set();
+    chosen.forEach(b => b.lines.filter(l => l.amount != null).forEach(l => {
+      if(!salesLedgerFor(l.gst, b.local)){
+        cases.add(`${Math.abs(Number(l.gst)-5)<0.01?'5%':'18%'} items ${b.local?'within':'outside'} ${settings.state}`);
+      }
+    }));
+    [...cases].forEach(c => p.push(`No sales ledger set for ${c} — add it in Tally settings.`));
+  }
+  return p;
+}
+
+function exportXml(){
+  const chosen = bills.filter(b => b.selected && !b.blocked);
+  if(!chosen.length) return;
+  const problems = settingsProblems(chosen);
+  if(problems.length){
+    $('exportStatus').innerHTML = `<span style="color:var(--bad)">Can't export — ${esc(problems[0])}</span>`;
+    toast(problems[0]);
+    return;
+  }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ENVELOPE>
+<HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
+<BODY>
+<IMPORTDATA>
+<REQUESTDESC>
+<REPORTNAME>Vouchers</REPORTNAME>
+<STATICVARIABLES><SVCURRENTCOMPANY>${esc(settings.company)}</SVCURRENTCOMPANY></STATICVARIABLES>
+</REQUESTDESC>
+<REQUESTDATA>
+${chosen.map((b,i) => billToXml(b,i)).join('\n')}
+</REQUESTDATA>
+</IMPORTDATA>
+</BODY>
+</ENVELOPE>`;
+  download(xml, `tally-import-${(chosen[0].date||todayISO())}-${stamp()}.xml`, 'application/xml');
+  chosen.forEach(b => exportLog.unshift({
+    party:b.party.name, date:b.date, lines:b.lines.filter(l=>l.amount!=null).length,
+    total:b.taxable, expectedTotal:b.grand, sig:b.sig, at:new Date().toISOString()
+  }));
+  save(); renderLog(); buildBills();
+}
+
+function exportCsv(){
+  const chosen = bills.filter(b => b.selected && !b.blocked);
+  const rows = [['Party','Date','Code','Tally item','Billed qty','Unit','Rate','Amount']];
+  chosen.forEach(b => b.lines.filter(l=>l.amount!=null).forEach(l => {
+    rows.push([b.party.name, b.date, l.code, l.item.name, qtyFmt(l.billedQty), l.unit, l.rate, l.amount]);
+  }));
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  download(csv, `bill-summary-${stamp()}.csv`, 'text/csv');
+}
+
+function download(text, name, type){
+  const blob = new Blob([text], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+}
+
+/* ============================ RENDER: BILLS ============================ */
+function renderBills(){
+  const host = $('bills');
+  if(!bills.length){ host.innerHTML=''; updateBar(); return; }
+  host.innerHTML = bills.map((b,bi) => {
+    const partyChip = b.party
+      ? `<span class="chip ${b.local?'ok':'warn'}">${b.local?'CGST + SGST':'IGST'}</span>`
+      : `<span class="chip bad">Party not in master</span>`;
+    const dupeChip = b.dupe ? `<span class="chip warn">Already exported today</span>` : '';
+
+    const rows = b.lines.map((l,li) => {
+      const rmBtn = `<button class="mini danger" data-removeline="${bi}" data-r="${l.rowIdx}" title="Remove this item from the bill" style="padding:2px 7px;line-height:1">&times;</button>`;
+      if(l.missing) return `<tr><td class="mono">${esc(l.code)}</td><td colspan="6" class="muted">Not in item master</td><td>${rmBtn}</td></tr>`;
+      if(l.issue)   return `<tr><td class="mono">${esc(l.code)}</td><td>${esc(l.item?l.item.name:'')}</td><td colspan="5" class="muted">${esc(l.issue)}</td><td>${rmBtn}</td></tr>`;
+      return `<tr>
+        <td class="mono">${esc(l.code)}</td>
+        <td>${esc(l.item.name)}<div class="mono muted" style="font-size:10.5px">${esc(l.basis||rules[l.item.cat].label)}</div></td>
+        <td class="num"><input data-edit="qty" data-b="${bi}" data-r="${l.rowIdx}" value="${l.qty}" style="width:62px;text-align:right"></td>
+        <td class="mono">${esc(l.unit)}</td>
+        <td class="num"><input data-edit="rate" data-b="${bi}" data-r="${l.rowIdx}" value="${l.quotedRate}" style="width:74px;text-align:right"></td>
+        <td class="num"><b>${money(l.rate)}</b></td>
+        <td class="num">${money(l.amount)}</td>
+        <td>${rmBtn}</td>
+      </tr>`;
+    }).join('');
+
+    const fixes = [];
+    if(!b.party) fixes.push(`
+      <div class="fix">
+        <h4>Add ${esc(b.block.customerName)} to the party master</h4>
+        <p>The XML needs the exact Tally ledger name, GSTIN and state before this bill can be written.</p>
+        <div class="row">
+          <div><label class="fld">Tally ledger name</label><input data-newparty="${bi}" data-f="name" value="${esc(b.block.customerName)}" style="width:230px"></div>
+          <div><label class="fld">GSTIN</label><input data-newparty="${bi}" data-f="gstin" style="width:170px"></div>
+          <div><label class="fld">State</label><input data-newparty="${bi}" data-f="state" value="Kerala" style="width:120px"></div>
+          <div><label class="fld">Address (as on invoice)</label><input data-newparty="${bi}" data-f="address" placeholder="line1, line2, phone" style="width:230px"></div>
+          <div><label class="fld">Pincode</label><input data-newparty="${bi}" data-f="pincode" style="width:90px"></div>
+          <div><label class="fld">Place</label><input data-newparty="${bi}" data-f="place" style="width:130px"></div>
+          <button class="primary mini" data-saveparty="${bi}">Save party</button>
+        </div>
+      </div>`);
+    if(b.missingItems.length){
+      const uniq = [...new Set(b.missingItems)];
+      fixes.push(`
+      <div class="fix">
+        <h4>${uniq.length} item${uniq.length>1?'s':''} not in the master yet</h4>
+        <p>Set the Tally stock item name and check the category — the rest is filled in from the code where it can be read.</p>
+        ${uniq.map((code,ci) => {
+          const g = guessSpec(code);
+          return `<div class="row" data-newitem="${bi}-${ci}">
+            <div><label class="fld">Code</label><input data-f="code" value="${esc(code)}" style="width:140px"></div>
+            <div><label class="fld">Tally stock item name</label><input data-f="name" placeholder="exact name in Tally" style="width:250px"></div>
+            <div><label class="fld">Category *</label><select data-f="cat"><option value="" selected>— select category —</option>${Object.keys(rules).map(k=>`<option value="${k}">${rules[k].label}${k===g.cat?' (suggested)':''}</option>`).join('')}</select></div>
+            <div><label class="fld">Ht ft</label><input data-f="h" value="${g.h??''}" style="width:60px"></div>
+            <div><label class="fld">Len ft</label><input data-f="l" value="${g.l??''}" style="width:60px"></div>
+            <div><label class="fld">HSN</label><input data-f="hsn" style="width:100px"></div>
+            <button class="primary mini" data-saveitem="${bi}-${ci}">Save item</button>
+          </div>`;
+        }).join('')}
+      </div>`);
+    }
+
+    const taxRows = b.local
+      ? `<tr><td>CGST</td><td>${money(b.cgst)}</td></tr><tr><td>SGST</td><td>${money(b.sgst)}</td></tr>`
+      : `<tr><td>IGST</td><td>${money(b.igst)}</td></tr>`;
+
+    return `<div class="bill ${b.blocked?'blocked':''}">
+      <div class="bill-head">
+        <div>
+          <div class="who">
+            ${b.party ? `<input type="checkbox" data-sel="${bi}" ${b.selected?'checked':''} style="margin-right:8px">` : ''}
+            ${esc(b.party ? b.party.name : b.block.customerName)}${partyChip}${dupeChip}
+          </div>
+          <div class="meta">${esc(b.block.customerName)} · ${b.lines.length} line${b.lines.length!==1?'s':''} · ${esc(b.date)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="mono" style="font-size:15px;font-weight:600">₹${money(b.taxable)} <span class="mono muted" style="font-size:11px;font-weight:400">exported · ₹${money(b.grand)} after tax</span></div>
+          <button class="mini danger" data-removebill="${bi}" title="Remove this bill from the batch">remove</button>
+        </div>
+      </div>
+      <div class="bill-body">
+        ${fixes.join('')}
+        <table class="grid">
+          <thead><tr><th>Code</th><th>Tally item</th><th style="text-align:right">Quantity</th><th>Unit</th><th style="text-align:right">Rate</th><th style="text-align:right">Bill rate</th><th style="text-align:right">Amount</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="totals"><table>
+          <tr class="grand"><td>Exported amount</td><td>₹${money(b.taxable)}</td></tr>
+          <tr><td colspan="2" class="mono muted" style="font-size:10.5px;padding:2px 0 8px">Tax isn't in this file — add it in Tally, alongside e-way bill / e-invoice details</td></tr>
+          <tr><td colspan="2" class="mono muted" style="font-size:10px;padding-bottom:2px">For reference — what Tally should compute:</td></tr>
+          ${taxRows}
+          ${settings.round && Math.abs(b.roundOff)>0.001 ? `<tr><td>Round off</td><td>${money(b.roundOff)}</td></tr>`:''}
+          <tr><td>Total after tax</td><td>₹${money(b.grand)}</td></tr>
+        </table></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Inline corrections write back to the loaded sheet, then everything recomputes.
+  host.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('change', e => {
+    const bi = +e.target.dataset.b, r = +e.target.dataset.r, f = e.target.dataset.edit;
+    const v = parseFloat(e.target.value);
+    if(isNaN(v)){ toast('That needs to be a number.'); renderBills(); return; }
+    bills[bi].block.rows[r][f === 'qty' ? 'qty' : 'rate'] = v;
+    buildBills();
+  }));
+  host.querySelectorAll('[data-sel]').forEach(cb => cb.addEventListener('change', e => {
+    bills[+e.target.dataset.sel].selected = e.target.checked; updateBar();
+  }));
+  host.querySelectorAll('[data-removebill]').forEach(btn => btn.addEventListener('click', e => {
+    const bi = +e.target.dataset.removebill;
+    const b = bills[bi];
+    askConfirm(`Remove the bill for ${b.party ? b.party.name : b.block.customerName}? This only drops it from this batch — your rate sheet on disk is unchanged.`, () => {
+      bills.splice(bi, 1);
+      renderBills();
+    });
+  }));
+  // Drops a single line from a bill by zeroing its qty in the loaded block —
+  // same mechanism the sheet parser already uses to skip un-dispatched rows,
+  // so it recomputes cleanly through buildBills() without any special-casing.
+  host.querySelectorAll('[data-removeline]').forEach(btn => btn.addEventListener('click', e => {
+    const bi = +e.target.dataset.removeline, r = +e.target.dataset.r;
+    bills[bi].block.rows[r].qty = 0;
+    buildBills();
+  }));
+  host.querySelectorAll('[data-saveparty]').forEach(btn => btn.addEventListener('click', e => {
+    const bi = e.target.dataset.saveparty;
+    const get = f => host.querySelector(`[data-newparty="${bi}"][data-f="${f}"]`).value.trim();
+    const name = get('name');
+    if(!name) return;
+    parties.push({ name, gstin:get('gstin'), state:get('state')||settings.state, alias:bills[+bi].block.customerName,
+                   address:get('address'), pincode:get('pincode'), place:get('place') });
+    save(); renderParties(); buildBills();
+  }));
+  host.querySelectorAll('[data-saveitem]').forEach(btn => btn.addEventListener('click', e => {
+    const key = e.target.dataset.saveitem;
+    const row = host.querySelector(`[data-newitem="${key}"]`);
+    const get = f => { const el = row.querySelector(`[data-f="${f}"]`); return el ? el.value.trim() : ''; };
+    const name = get('name'), code = get('code');
+    if(!name || !code){ toast('A code and the exact Tally stock item name are both needed.'); return; }
+    const cat = get('cat');
+    if(!cat || !rules[cat]){ toast('Pick a category — it decides the pricing formula, so it can\'t be guessed silently.'); return; }
+    if(items.some(i => tight(i.code) === tight(code))){ toast(`Code ${code} is already in the item master.`); return; }
+    items.push({ code, name, cat, unit:rules[cat].unit, h:get('h')?Number(get('h')):null,
+                 l:get('l')?Number(get('l')):null, bundle:null, hsn:get('hsn'), gst:rules[cat].tax, variants:'' });
+    save(); renderItems(); buildBills();
+  }));
+  updateBar();
+}
+
+function updateBar(){
+  const ready = bills.filter(b => b.selected && !b.blocked);
+  const blocked = bills.filter(b => b.blocked);
+  const bar = $('exportBar');
+  if(!bills.length){ bar.classList.remove('show'); return; }
+  bar.classList.add('show');
+  const total = ready.reduce((s,b) => s+b.taxable, 0);
+  const totalAfterTax = ready.reduce((s,b) => s+b.grand, 0);
+  const problems = ready.length ? settingsProblems(ready) : [];
+  $('exportStatus').innerHTML = problems.length
+    ? `<span style="color:var(--bad)">${esc(problems[0])}</span>`
+    : `${ready.length} bill${ready.length!==1?'s':''} ready · ₹${money(total)} exported <span class="muted">(₹${money(totalAfterTax)} after tax, added in Tally)</span>` +
+      (blocked.length ? ` <span style="color:var(--bad)">· ${blocked.length} need fixing first</span>` : '');
+  $('exportXmlBtn').disabled = ready.length === 0 || problems.length > 0;
+}
+
+/* ============================ RENDER: MASTERS ============================ */
+let selectedItems = new Set();
+
+function itemBulkBarHTML(){
+  const n = selectedItems.size;
+  if(!n) return '';
+  return `<div class="bulkbar show">
+    <span class="count">${n} selected</span>
+    <button class="mini" id="bulkEditBtn">Bulk edit</button>
+    <button class="mini danger" id="bulkRemoveBtn">Remove selected</button>
+    <button class="mini" id="bulkClearBtn">Clear selection</button>
+  </div>
+  <div class="bulkedit" id="bulkEditPanel">
+    <div class="fld2"><label>Category (blank = no change)</label>
+      <select id="be_cat" class="catsel"><option value="">— no change —</option>${Object.keys(rules).map(k=>`<option value="${k}">${rules[k].label}</option>`).join('')}</select>
+    </div>
+    <div class="fld2"><label>Unit</label><input id="be_unit" style="width:70px"></div>
+    <div class="fld2"><label>HSN</label><input id="be_hsn" style="width:90px"></div>
+    <div class="fld2"><label>GST %</label><input id="be_gst" style="width:56px"></div>
+    <div class="fld2"><label>Bundle kg</label><input id="be_bundle" style="width:70px"></div>
+    <button class="primary mini" id="bulkApplyBtn">Apply to ${n} item${n!==1?'s':''}</button>
+    <button class="mini" id="bulkCancelBtn">Cancel</button>
+  </div>`;
+}
+
+function syncItemCatFilter(){
+  const sel = $('itemCatFilter');
+  const cur = sel.value;
+  const counts = {};
+  items.forEach(it => counts[it.cat] = (counts[it.cat]||0)+1);
+  sel.innerHTML = `<option value="">All categories (${items.length})</option>` +
+    Object.keys(rules).filter(k => counts[k]).map(k =>
+      `<option value="${k}" ${cur===k?'selected':''}>${esc(rules[k].label)} (${counts[k]})</option>`).join('');
+}
+
+function renderItems(){
+  syncItemCatFilter();
+  const q = tight($('itemSearch').value);
+  const catF = $('itemCatFilter').value;
+  const list = items.map((it,i)=>({it,i})).filter(({it}) =>
+    (!q || tight(it.code).includes(q) || tight(it.name).includes(q)) &&
+    (!catF || it.cat === catF));
+  const allVisibleSelected = list.length>0 && list.every(({it}) => selectedItems.has(it));
+
+  // Duplicate codes silently make lookups pick the wrong item, so surface them.
+  const codeCount = {};
+  items.forEach(it => { const c = tight(it.code); if(c) codeCount[c] = (codeCount[c]||0)+1; });
+  const dupCodes = Object.keys(codeCount).filter(c => codeCount[c] > 1);
+  $('itemDupWarn').innerHTML = dupCodes.length ? `<div class="note bad">
+    ${dupCodes.length} duplicate code${dupCodes.length!==1?'s':''} in the master — billing will pick whichever comes first, so these must be made unique:
+    <div class="mono" style="margin-top:6px;font-size:11px">${dupCodes.slice(0,12).map(c =>
+      esc(items.filter(it => tight(it.code)===c).map(it => it.code).join(' / ') + '  →  ' +
+          items.filter(it => tight(it.code)===c).map(it => it.name).join('  |  '))).join('<br>')}
+      ${dupCodes.length>12?`<br>…and ${dupCodes.length-12} more`:''}</div>
+  </div>` : '';
+
+  // Rows missing a code, a Tally name or a category can't be exported and shouldn't sit here
+  // unnoticed — surface them with a one-click clean-up rather than waiting for an import to fail.
+  const badItems = items.filter(it => !tight(it.code) || !tight(it.name) || !rules[it.cat]);
+  if(badItems.length){
+    $('itemDupWarn').innerHTML += `<div class="note bad">
+      ${badItems.length} incomplete item row${badItems.length!==1?'s':''} (missing code, Tally name or category). These can't be billed — finish them below or clear them out.
+      <div class="btnrow" style="margin-top:8px"><button class="mini danger" id="dropBadItems">Remove ${badItems.length} incomplete row${badItems.length!==1?'s':''}</button></div>
+    </div>`;
+  }
+
+  $('itemBulkBar').innerHTML = itemBulkBarHTML();
+
+  $('itemTable').innerHTML = `
+    <thead><tr>
+      <th style="width:28px"><input type="checkbox" id="selectAllItems" ${allVisibleSelected?'checked':''}></th>
+      <th style="min-width:170px">Code</th><th style="min-width:260px">Tally stock item name</th>
+      <th style="min-width:160px">Other codes / spellings</th>
+      <th style="width:90px">Category</th><th>Unit</th><th>Ht</th><th>Len</th><th>Bundle</th><th>HSN</th><th>GST</th><th></th>
+    </tr></thead>
+    <tbody>${list.length ? list.map(({it,i}) => `<tr>
+      <td><input type="checkbox" data-sel-item="${i}" ${selectedItems.has(it)?'checked':''}></td>
+      <td><input data-i="${i}" data-f="code" value="${esc(it.code)}" style="width:100%;min-width:160px"></td>
+      <td><input data-i="${i}" data-f="name" value="${esc(it.name)}" style="width:100%;min-width:260px"></td>
+      <td><input data-i="${i}" data-f="variants" value="${esc(it.variants||'')}" placeholder="comma separated" style="width:100%;min-width:150px" title="Other ways this code/name shows up on rate sheets — comma separated"></td>
+      <td><select data-i="${i}" data-f="cat" class="catsel" title="${esc(rules[it.cat]?.label||it.cat||'no category set')}"><option value="" ${rules[it.cat]?'':'selected'}>— select category —</option>${Object.keys(rules).map(k=>`<option value="${k}" ${it.cat===k?'selected':''}>${rules[k].label}</option>`).join('')}</select></td>
+      <td><input data-i="${i}" data-f="unit" value="${esc(it.unit||'')}" style="width:60px"></td>
+      <td><input data-i="${i}" data-f="h" value="${it.h??''}" style="width:48px"></td>
+      <td><input data-i="${i}" data-f="l" value="${it.l??''}" style="width:48px"></td>
+      <td><input data-i="${i}" data-f="bundle" value="${it.bundle??''}" style="width:52px"></td>
+      <td><input data-i="${i}" data-f="hsn" value="${esc(it.hsn||'')}" style="width:80px"></td>
+      <td><input data-i="${i}" data-f="gst" value="${it.gst??''}" style="width:44px"></td>
+      <td><button class="mini danger" data-del="${i}">remove</button></td>
+    </tr>`).join('') : `<tr><td colspan="12" class="muted" style="padding:18px;text-align:center">No items match that search.</td></tr>`}</tbody>`;
+
+  const dropBad = $('dropBadItems');
+  if(dropBad) dropBad.addEventListener('click', () => {
+    askConfirm(`Remove ${badItems.length} incomplete item row${badItems.length!==1?'s':''}? Anything with a code, a Tally name and a category is kept.`, () => {
+      badItems.forEach(it => selectedItems.delete(it));
+      items = items.filter(it => !badItems.includes(it));
+      save(); renderItems(); if(blocks) buildBills();
+      toast('Incomplete item rows removed.');
+    });
+  });
+
+  $('itemTable').querySelectorAll('input[data-f],select[data-f]').forEach(el => el.addEventListener('change', e => {
+    const i = +e.target.dataset.i, f = e.target.dataset.f;
+    let v = e.target.value.trim();
+    if(['h','l','bundle','gst'].includes(f)) v = v === '' ? null : Number(v);
+    items[i][f] = v;
+    if(f === 'cat' && rules[v]) items[i].unit = rules[v].unit;
+    save(); if(f==='cat') renderItems(); if(blocks) buildBills();
+  }));
+  $('itemTable').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', e => {
+    const it = items[+e.target.dataset.del];
+    selectedItems.delete(it);
+    items.splice(+e.target.dataset.del,1); save(); renderItems(); if(blocks) buildBills();
+  }));
+  $('itemTable').querySelectorAll('[data-sel-item]').forEach(cb => cb.addEventListener('change', e => {
+    const it = items[+e.target.dataset.selItem];
+    if(e.target.checked) selectedItems.add(it); else selectedItems.delete(it);
+    renderItems();
+  }));
+  const selAll = document.getElementById('selectAllItems');
+  if(selAll) selAll.addEventListener('change', e => {
+    list.forEach(({it}) => { if(e.target.checked) selectedItems.add(it); else selectedItems.delete(it); });
+    renderItems();
+  });
+
+  const bulkEditBtn = document.getElementById('bulkEditBtn');
+  if(bulkEditBtn) bulkEditBtn.addEventListener('click', () => {
+    document.getElementById('bulkEditPanel').classList.add('show');
+  });
+  const bulkClearBtn = document.getElementById('bulkClearBtn');
+  if(bulkClearBtn) bulkClearBtn.addEventListener('click', () => { selectedItems.clear(); renderItems(); });
+  const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+  if(bulkCancelBtn) bulkCancelBtn.addEventListener('click', () => {
+    document.getElementById('bulkEditPanel').classList.remove('show');
+  });
+  const bulkRemoveBtn = document.getElementById('bulkRemoveBtn');
+  if(bulkRemoveBtn) bulkRemoveBtn.addEventListener('click', () => {
+    const n = selectedItems.size;
+    askConfirm(`Remove ${n} selected item${n!==1?'s':''} from the master? This can't be undone from here.`, () => {
+      items = items.filter(it => !selectedItems.has(it));
+      selectedItems.clear(); save(); renderItems(); if(blocks) buildBills();
+      toast(`${n} item${n!==1?'s':''} removed.`);
+    });
+  });
+  const bulkApplyBtn = document.getElementById('bulkApplyBtn');
+  if(bulkApplyBtn) bulkApplyBtn.addEventListener('click', () => {
+    const cat = $('be_cat').value;
+    const unit = $('be_unit').value.trim();
+    const hsn = $('be_hsn').value.trim();
+    const gst = $('be_gst').value.trim();
+    const bundle = $('be_bundle').value.trim();
+    let n = 0;
+    items.forEach(it => {
+      if(!selectedItems.has(it)) return;
+      if(cat){ it.cat = cat; if(rules[cat]) it.unit = rules[cat].unit; }
+      if(unit) it.unit = unit;
+      if(hsn) it.hsn = hsn;
+      if(gst) it.gst = Number(gst);
+      if(bundle) it.bundle = Number(bundle);
+      n++;
+    });
+    save();
+    const count = selectedItems.size;
+    selectedItems.clear();
+    renderItems(); if(blocks) buildBills();
+    toast(`${count} item${count!==1?'s':''} updated.`);
+  });
+}
+
+let selectedParties = new Set();
+
+function renderParties(){
+  const q = tight($('partySearch').value);
+  const list = parties.map((p,i)=>({p,i})).filter(({p}) => !q || tight(p.name).includes(q) || tight(p.alias||'').includes(q));
+  const allVisibleSelected = list.length>0 && list.every(({p}) => selectedParties.has(p));
+
+  // A party with no ledger name is the one bad row that can quietly break every bill in a
+  // batch: matching used to treat its empty name as a prefix of every customer, so bills
+  // silently attached to it and showed a blank heading. Matching now ignores these, but
+  // they still can't be exported, so flag them loudly and offer to clear them.
+  const blankParties = parties.filter(p => !tight(p.name));
+  $('partyWarn').innerHTML = blankParties.length ? `<div class="note bad">
+    ${blankParties.length} part${blankParties.length!==1?'ies':'y'} with no Tally ledger name. These can't be billed against — give them a name below, or remove them.
+    <div class="btnrow" style="margin-top:8px"><button class="mini danger" id="dropBlankParties">Remove ${blankParties.length} blank row${blankParties.length!==1?'s':''}</button></div>
+  </div>` : '';
+
+  const n = selectedParties.size;
+  $('partyBulkBar').innerHTML = n ? `<div class="bulkbar show">
+    <span class="count">${n} selected</span>
+    <button class="mini" id="pBulkEditBtn">Bulk edit</button>
+    <button class="mini danger" id="pBulkRemoveBtn">Remove selected</button>
+    <button class="mini" id="pBulkClearBtn">Clear selection</button>
+  </div>
+  <div class="bulkedit" id="pBulkEditPanel">
+    <div class="fld2"><label>State (blank = no change)</label><input id="pbe_state" style="width:140px"></div>
+    <div class="fld2"><label>Alias</label><input id="pbe_alias" style="width:160px"></div>
+    <button class="primary mini" id="pBulkApplyBtn">Apply to ${n} part${n!==1?'ies':'y'}</button>
+    <button class="mini" id="pBulkCancelBtn">Cancel</button>
+  </div>` : '';
+
+  $('partyTable').innerHTML = `
+    <thead><tr>
+      <th style="width:28px"><input type="checkbox" id="selectAllParties" ${allVisibleSelected?'checked':''}></th>
+      <th>Tally ledger name</th><th>GSTIN</th><th>State</th><th>Alias on rate sheet</th>
+      <th>Address (as on invoice)</th><th>Pincode</th><th>Place</th><th></th>
+    </tr></thead>
+    <tbody>${list.length ? list.map(({p,i}) => `<tr>
+      <td><input type="checkbox" data-sel-party="${i}" ${selectedParties.has(p)?'checked':''}></td>
+      <td><input data-i="${i}" data-f="name" value="${esc(p.name)}" style="width:100%;min-width:220px"></td>
+      <td><input data-i="${i}" data-f="gstin" value="${esc(p.gstin||'')}" style="width:170px"></td>
+      <td><input data-i="${i}" data-f="state" value="${esc(p.state||'')}" style="width:120px"></td>
+      <td><input data-i="${i}" data-f="alias" value="${esc(p.alias||'')}" style="width:180px"></td>
+      <td><input data-i="${i}" data-f="address" value="${esc(p.address||'')}" placeholder="line1, line2, phone" style="width:100%;min-width:220px"></td>
+      <td><input data-i="${i}" data-f="pincode" value="${esc(p.pincode||'')}" style="width:80px"></td>
+      <td><input data-i="${i}" data-f="place" value="${esc(p.place||'')}" style="width:130px"></td>
+      <td><button class="mini danger" data-del="${i}">remove</button></td>
+    </tr>`).join('') : `<tr><td colspan="9" class="muted" style="padding:18px;text-align:center">No parties yet. They get added as you bill them, or paste a list in.</td></tr>`}</tbody>`;
+
+  const dropBlank = $('dropBlankParties');
+  if(dropBlank) dropBlank.addEventListener('click', () => {
+    askConfirm(`Remove ${blankParties.length} party row${blankParties.length!==1?'s':''} with no ledger name? Named parties are untouched.`, () => {
+      blankParties.forEach(p => selectedParties.delete(p));
+      parties = parties.filter(p => !blankParties.includes(p));
+      save(); renderParties(); if(blocks) buildBills();
+      toast('Blank party rows removed.');
+    });
+  });
+
+  $('partyTable').querySelectorAll('input[data-f]').forEach(el => el.addEventListener('change', e => {
+    parties[+e.target.dataset.i][e.target.dataset.f] = e.target.value.trim();
+    save(); if(blocks) buildBills();
+  }));
+  $('partyTable').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', e => {
+    const p = parties[+e.target.dataset.del];
+    selectedParties.delete(p);
+    parties.splice(+e.target.dataset.del,1); save(); renderParties(); if(blocks) buildBills();
+  }));
+  $('partyTable').querySelectorAll('[data-sel-party]').forEach(cb => cb.addEventListener('change', e => {
+    const p = parties[+e.target.dataset.selParty];
+    if(e.target.checked) selectedParties.add(p); else selectedParties.delete(p);
+    renderParties();
+  }));
+  const selAll = document.getElementById('selectAllParties');
+  if(selAll) selAll.addEventListener('change', e => {
+    list.forEach(({p}) => { if(e.target.checked) selectedParties.add(p); else selectedParties.delete(p); });
+    renderParties();
+  });
+
+  const eb = document.getElementById('pBulkEditBtn');
+  if(eb) eb.addEventListener('click', () => document.getElementById('pBulkEditPanel').classList.add('show'));
+  const cb2 = document.getElementById('pBulkCancelBtn');
+  if(cb2) cb2.addEventListener('click', () => document.getElementById('pBulkEditPanel').classList.remove('show'));
+  const clr = document.getElementById('pBulkClearBtn');
+  if(clr) clr.addEventListener('click', () => { selectedParties.clear(); renderParties(); });
+  const rm = document.getElementById('pBulkRemoveBtn');
+  if(rm) rm.addEventListener('click', () => {
+    const c = selectedParties.size;
+    askConfirm(`Remove ${c} selected part${c!==1?'ies':'y'} from the master? This can't be undone from here.`, () => {
+      parties = parties.filter(p => !selectedParties.has(p));
+      selectedParties.clear(); save(); renderParties(); if(blocks) buildBills();
+      toast(`${c} part${c!==1?'ies':'y'} removed.`);
+    });
+  });
+  const ap = document.getElementById('pBulkApplyBtn');
+  if(ap) ap.addEventListener('click', () => {
+    const st = $('pbe_state').value.trim(), al = $('pbe_alias').value.trim();
+    const c = selectedParties.size;
+    parties.forEach(p => {
+      if(!selectedParties.has(p)) return;
+      if(st) p.state = st;
+      if(al) p.alias = al;
+    });
+    save(); selectedParties.clear(); renderParties(); if(blocks) buildBills();
+    toast(`${c} part${c!==1?'ies':'y'} updated.`);
+  });
+}
+
+function renderRules(){
+  $('rulesTable').innerHTML = `
+    <thead><tr><th>Category</th><th>Formula</th><th>Default length ft</th><th>Tax %</th><th>Decimals</th><th>Unit</th></tr></thead>
+    <tbody>${Object.keys(rules).map(k => {
+      const r = rules[k];
+      const f = r.dim ? 'ceil(height × length × rate ÷ tax)'
+              : r.area ? 'ceil(rate ÷ tax), qty × height × length sq.ft'
+              : r.bundled ? 'ceil(rate ÷ tax), qty × bundle kg'
+              : 'ceil(rate ÷ tax)';
+      return `<tr>
+        <td>${esc(r.label)}</td>
+        <td class="mono muted" style="font-size:11px">${esc(f)}</td>
+        <td>${r.lengthFt!=null?`<input data-r="${k}" data-f="lengthFt" value="${r.lengthFt}" style="width:60px">`:'<span class="muted">—</span>'}</td>
+        <td><input data-r="${k}" data-f="tax" value="${r.tax}" style="width:50px"></td>
+        <td><input data-r="${k}" data-f="decimals" value="${r.decimals}" style="width:50px"></td>
+        <td><input data-r="${k}" data-f="unit" value="${esc(r.unit)}" style="width:64px"></td>
+      </tr>`;
+    }).join('')}</tbody>`;
+  $('rulesTable').querySelectorAll('input').forEach(el => el.addEventListener('change', e => {
+    const k = e.target.dataset.r, f = e.target.dataset.f;
+    rules[k][f] = (f === 'unit') ? e.target.value.trim() : Number(e.target.value);
+    save(); if(blocks) buildBills();
+  }));
+
+  $('bundleTable').innerHTML = `
+    <thead><tr><th>Label</th><th>Matches item text</th><th>Kg per bundle</th><th></th></tr></thead>
+    <tbody>${bundleRules.map((b,i) => `<tr>
+      <td><input data-b="${i}" data-f="label" value="${esc(b.label)}" style="width:100%;min-width:180px"></td>
+      <td><input data-b="${i}" data-f="match" value="${esc(b.match)}" style="width:180px"></td>
+      <td><input data-b="${i}" data-f="weight" value="${b.weight}" style="width:64px"></td>
+      <td><button class="mini danger" data-delb="${i}">remove</button></td>
+    </tr>`).join('')}</tbody>`;
+  $('bundleTable').querySelectorAll('input').forEach(el => el.addEventListener('change', e => {
+    const i = +e.target.dataset.b, f = e.target.dataset.f;
+    bundleRules[i][f] = f==='weight' ? Number(e.target.value) : e.target.value.trim();
+    save(); if(blocks) buildBills();
+  }));
+  $('bundleTable').querySelectorAll('[data-delb]').forEach(b => b.addEventListener('click', e => {
+    bundleRules.splice(+e.target.dataset.delb,1); save(); renderRules(); if(blocks) buildBills();
+  }));
+}
+
+function renderSettings(){
+  ['company','gstin','state','vtype','godown','salesLocal18','salesInter18','salesLocal5','salesInter5','cgst','sgst','igst','round','roundMethod'].forEach(k => {
+    const el = $('s_' + k); if(el) el.value = settings[k] || '';
+  });
+}
+
+function renderLog(){
+  $('logTable').innerHTML = `
+    <thead><tr><th>Party</th><th>Bill date</th><th>Lines</th><th style="text-align:right">Exported (excl. tax)</th><th style="text-align:right">Expected after tax</th><th>Exported</th></tr></thead>
+    <tbody>${exportLog.length ? exportLog.map(e => `<tr>
+      <td>${esc(e.party)}</td><td class="mono">${esc(e.date)}</td><td class="num">${e.lines}</td>
+      <td class="num">${money(e.total)}</td>
+      <td class="num muted">${e.expectedTotal!=null?money(e.expectedTotal):'—'}</td>
+      <td class="mono muted">${new Date(e.at).toLocaleString('en-IN')}</td>
+    </tr>`).join('') : `<tr><td colspan="6" class="muted" style="padding:18px;text-align:center">Nothing exported yet.</td></tr>`}</tbody>`;
+}
+
+function renderAll(){ renderItems(); renderParties(); renderRules(); renderSettings(); renderLog(); }
+
+/* ============================ EVENTS ============================ */
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('open'));
+  t.classList.add('active'); $('tab-' + t.dataset.tab).classList.add('open');
+}));
+
+const drop = $('drop');
+drop.addEventListener('click', () => $('fileInput').click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('drag');
+  const f = [...e.dataTransfer.files].find(f => /\.xlsx?$/i.test(f.name));
+  if(f) readSheet(f);
+});
+$('fileInput').addEventListener('change', e => { if(e.target.files[0]) readSheet(e.target.files[0]); e.target.value=''; });
+
+function readSheet(file){
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const b = parseSheet(rd.result);
+      if(!b.length){ $('loadNote').innerHTML = `<div class="note bad">No customer blocks found in ${esc(file.name)}. A customer row needs the name in the first column with qty and rate left empty.</div>`; return; }
+      blocks = b; sheetName = file.name;
+      const lines = b.reduce((s,x)=>s+x.rows.length,0);
+      $('loadNote').innerHTML = `<div class="note ok">Loaded ${esc(file.name)} — ${b.length} customers, ${lines} lines.</div>`;
+      $('dropBig').textContent = esc(file.name);
+      $('dropSmall').innerHTML = `${b.length} customers, ${lines} lines loaded. Click here or drop a file to replace it, or use "Remove this file" below to clear it.`;
+      $('buildActions').style.display = 'flex';
+      if(!$('billDate').value) $('billDate').value = todayISO();
+      buildBills();
+    }catch(err){
+      $('loadNote').innerHTML = `<div class="note bad">Could not read ${esc(file.name)}: ${esc(err.message||'unknown error')}</div>`;
+    }
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+$('recalcBtn').addEventListener('click', buildBills);
+$('billDate').addEventListener('change', () => { if(blocks) buildBills(); });
+$('clearBtn').addEventListener('click', () => {
+  askConfirm('Remove the loaded rate sheet? Your masters and export log are untouched — you can drop a fresh Excel right after.', () => {
+    blocks = null; bills = []; sheetName = '';
+    $('bills').innerHTML=''; $('loadNote').innerHTML='';
+    $('dropBig').textContent = 'Drop your rate sheet here';
+    $('dropSmall').textContent = 'Same layout as the checker sheet — a row with just a customer name starts a block, then item code / qty / rate below it. Blank rate carries down from the row above.';
+    $('buildActions').style.display='none';
+    $('fileInput').value = '';
+    updateBar();
+    toast('Rate sheet removed. Drop a new file whenever you\'re ready.');
+  });
+});
+$('exportXmlBtn').addEventListener('click', exportXml);
+$('exportCsvBtn').addEventListener('click', exportCsv);
+
+$('itemSearch').addEventListener('input', renderItems);
+$('itemCatFilter').addEventListener('change', renderItems);
+$('clearItemsBtn').addEventListener('click', () => {
+  if(!items.length){ toast('Item master is already empty.'); return; }
+  askConfirm(`Remove all ${items.length} items from the master? Download a backup first if you might need them.`, () => {
+    items = []; selectedItems.clear(); save(); renderItems(); if(blocks) buildBills();
+    toast('Item master cleared.');
+  });
+});
+$('itemExportBtn').addEventListener('click', () => {
+  // Same column order the Paste from Excel box expects, so a round trip works.
+  const rows = items.map(it => ({
+    'Code': it.code, 'Tally Item Name': it.name, 'Category': it.cat, 'Unit': it.unit || '',
+    'Height (ft)': it.h ?? '', 'Length (ft)': it.l ?? '', 'Bundle kg': it.bundle ?? '',
+    'HSN': it.hsn || '', 'GST %': it.gst ?? '', 'Variants': it.variants || ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:30},{wch:48},{wch:14},{wch:10},{wch:11},{wch:11},{wch:10},{wch:12},{wch:8},{wch:30}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Item Master');
+  XLSX.writeFile(wb, `item-master-${stamp()}.xlsx`);
+  toast(`${items.length} items exported.`);
+});
+$('partySearch').addEventListener('input', renderParties);
+// ---- Add item: a form that must be filled in, never a blank row dropped into the master.
+// A half-finished row is worse than no row: it can't be exported, and until this was
+// fixed a blank one could also poison matching for every bill in the batch.
+function openNewItem(){
+  $('niCode').value=''; $('niName').value=''; $('niUnit').value=''; $('niH').value='';
+  $('niL').value=''; $('niBundle').value=''; $('niHsn').value=''; $('niGst').value='';
+  $('niVariants').value=''; $('niWarn').innerHTML='';
+  // Category has no default — it must be chosen, so nothing silently prices as a sheet.
+  $('niCat').innerHTML = `<option value="">— select category —</option>` +
+    Object.keys(rules).map(k=>`<option value="${k}">${rules[k].label}</option>`).join('');
+  $('newItemBox').style.display='block';
+  $('pasteItemsBox').style.display='none';
+  $('niCode').focus();
+}
+$('addItemBtn').addEventListener('click', openNewItem);
+$('niCancel').addEventListener('click', () => { $('newItemBox').style.display='none'; });
+// Code alone is enough to guess height/length/category — offered as a prefill, never forced.
+$('niCode').addEventListener('blur', () => {
+  const code = $('niCode').value.trim();
+  if(!code) return;
+  const g = guessSpec(code);
+  if(!$('niCat').value && g.cat) $('niCat').value = g.cat;
+  if(!$('niH').value && g.h != null) $('niH').value = g.h;
+  if(!$('niL').value && g.l != null) $('niL').value = g.l;
+  if(!$('niUnit').value && g.cat && rules[g.cat]) $('niUnit').value = rules[g.cat].unit;
+});
+$('niSave').addEventListener('click', () => {
+  const code = $('niCode').value.trim();
+  const name = $('niName').value.trim();
+  const cat  = $('niCat').value;
+  const miss = [];
+  if(!code) miss.push('a code');
+  if(!name) miss.push('the Tally stock item name');
+  if(!cat)  miss.push('a category');
+  if(miss.length){
+    $('niWarn').innerHTML = `<div class="note bad">Still needs ${esc(miss.join(', '))} before it can be saved.</div>`;
+    return;
+  }
+  const clash = items.find(i => tight(i.code) === tight(code));
+  if(clash){
+    $('niWarn').innerHTML = `<div class="note bad">Code ${esc(code)} is already in the master as “${esc(clash.name)}”. Edit that row instead, or use a different code.</div>`;
+    return;
+  }
+  const num = v => v.trim()==='' ? null : Number(v);
+  items.unshift({ code, name, cat,
+    unit: $('niUnit').value.trim() || rules[cat].unit,
+    h: num($('niH').value), l: num($('niL').value), bundle: num($('niBundle').value),
+    hsn: $('niHsn').value.trim(), gst: num($('niGst').value) ?? rules[cat].tax,
+    variants: $('niVariants').value.trim() });
+  save(); renderItems();
+  $('newItemBox').style.display='none';
+  toast(`Added ${code}.`);
+  if(blocks) buildBills();
+});
+
+// ---- Add party: same treatment. The ledger name is the one field nothing works without.
+function openNewParty(){
+  $('npName').value=''; $('npGstin').value=''; $('npState').value=settings.state;
+  $('npAlias').value=''; $('npAddress').value=''; $('npPincode').value=''; $('npPlace').value='';
+  $('npWarn').innerHTML='';
+  $('newPartyBox').style.display='block';
+  $('pastePartiesBox').style.display='none'; $('uploadPartiesBox').style.display='none';
+  $('npName').focus();
+}
+$('addPartyBtn').addEventListener('click', openNewParty);
+$('npCancel').addEventListener('click', () => { $('newPartyBox').style.display='none'; });
+// A valid GSTIN already states the state — fill it in rather than trusting a typed one.
+$('npGstin').addEventListener('blur', () => {
+  const g = $('npGstin').value.trim();
+  if(!/^[0-9]{2}[A-Z0-9]{13}$/i.test(g)) return;
+  const st = stateFromGstin(g);
+  if(st) $('npState').value = st;
+});
+$('npSave').addEventListener('click', () => {
+  const name = $('npName').value.trim();
+  if(!name){
+    $('npWarn').innerHTML = `<div class="note bad">The Tally ledger name is required — it's what the XML matches on.</div>`;
+    return;
+  }
+  const clash = parties.find(p => tight(p.name) === tight(name));
+  if(clash){
+    $('npWarn').innerHTML = `<div class="note bad">“${esc(clash.name)}” is already in the party master. Edit that row instead.</div>`;
+    return;
+  }
+  const gstin = $('npGstin').value.trim();
+  if(gstin && !/^[0-9]{2}[A-Z0-9]{13}$/i.test(gstin)){
+    $('npWarn').innerHTML = `<div class="note bad">That GSTIN doesn't look right (needs 2 digits then 13 characters). Clear it or correct it — a wrong GSTIN on the invoice is worse than none.</div>`;
+    return;
+  }
+  parties.unshift({ name, gstin, state: $('npState').value.trim() || settings.state,
+    alias: $('npAlias').value.trim(), address: $('npAddress').value.trim(),
+    pincode: $('npPincode').value.trim(), place: $('npPlace').value.trim() });
+  save(); renderParties();
+  $('newPartyBox').style.display='none';
+  toast(`Added ${name}.`);
+  if(blocks) buildBills();
+});
+$('addBundleBtn').addEventListener('click', () => {
+  bundleRules.push({ label:'New bundle item', match:'', weight:25 }); save(); renderRules();
+});
+
+function splitPaste(text){
+  return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    .map(l => l.split(/\t|,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g,'')));
+}
+$('pasteItemsBtn').addEventListener('click', () => { $('pasteItemsBox').style.display='block'; });
+$('pasteItemsCancel').addEventListener('click', () => { $('pasteItemsBox').style.display='none'; });
+$('pasteItemsGo').addEventListener('click', () => {
+  let n = 0;
+  splitPaste($('pasteItemsText').value).forEach(c => {
+    if(!c[0] || !c[1]) return;
+    const cat = (c[2] && rules[c[2]]) ? c[2] : guessSpec(c[0]).cat;
+    items.push({ code:c[0], name:c[1], cat, unit:c[3]||rules[cat].unit,
+      h:c[4]?Number(c[4]):null, l:c[5]?Number(c[5]):null, bundle:c[6]?Number(c[6]):null,
+      hsn:c[7]||'', gst:c[8]?Number(c[8]):rules[cat].tax, variants:c[9]||'' });
+    n++;
+  });
+  $('pasteItemsText').value=''; $('pasteItemsBox').style.display='none';
+  save(); renderItems(); if(blocks) buildBills();
+  toast(n + ' items added.');
+});
+$('clearPartiesBtn').addEventListener('click', () => {
+  if(!parties.length){ toast('Party master is already empty.'); return; }
+  askConfirm(`Remove all ${parties.length} parties from the master? This can't be undone from here \u2014 re-upload your Excel afterwards.`, () => {
+    parties = []; selectedParties.clear(); save(); renderParties();
+    toast('Party master cleared.');
+  });
+});
+$('uploadPartiesBtn').addEventListener('click', () => {
+  $('uploadPartiesBox').style.display = $('uploadPartiesBox').style.display === 'none' ? 'block' : 'none';
+});
+$('partyDrop').addEventListener('click', () => $('partyFileInput').click());
+$('partyDrop').addEventListener('dragover', e => { e.preventDefault(); $('partyDrop').classList.add('drag'); });
+$('partyDrop').addEventListener('dragleave', () => $('partyDrop').classList.remove('drag'));
+$('partyDrop').addEventListener('drop', e => {
+  e.preventDefault(); $('partyDrop').classList.remove('drag');
+  const f = [...e.dataTransfer.files].find(f => /\.xlsx?$/i.test(f.name));
+  if(f) readPartyFile(f);
+});
+$('partyFileInput').addEventListener('change', e => { if(e.target.files[0]) readPartyFile(e.target.files[0]); e.target.value=''; });
+
+function readPartyFile(file){
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const wb = XLSX.read(rd.result, { type:'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval:null });
+      if(!rows.length){ toast('That sheet looks empty.'); return; }
+
+      // find the name/gstin/address columns regardless of exact header wording/case
+      const headers = Object.keys(rows[0]);
+      const nameCol = headers.find(h => /^name$/i.test(h.trim())) || headers.find(h => /name/i.test(h));
+      const gstCol  = headers.find(h => /^gstin$/i.test(h.trim())) || headers.find(h => /gst/i.test(h));
+      const addrCol = headers.find(h => /^address$/i.test(h.trim())) || headers.find(h => /addr/i.test(h));
+      const pinCol  = headers.find(h => /^pin\s*code$/i.test(h.trim())) || headers.find(h => /pin\s*code|pincode/i.test(h));
+      const placeCol= headers.find(h => /^place$/i.test(h.trim())) || headers.find(h => /place/i.test(h));
+      if(!nameCol){ toast('Could not find a Name column in that sheet.'); return; }
+
+      let added = 0, updated = 0, skippedBadGstin = 0;
+      rows.forEach(r => {
+        const name = r[nameCol] == null ? '' : String(r[nameCol]).trim();
+        if(!name) return;
+        const gstinRaw = gstCol && r[gstCol] != null ? String(r[gstCol]).trim() : '';
+        const gstinOk = /^[0-9]{2}[A-Z0-9]{13}$/i.test(gstinRaw);
+        const state = gstinOk ? stateFromGstin(gstinRaw) : null;
+        if(gstCol && gstinRaw && !gstinOk) skippedBadGstin++;
+        const address = addrCol && r[addrCol] != null ? String(r[addrCol]).trim() : '';
+        const pincode = pinCol && r[pinCol] != null ? String(r[pinCol]).trim() : '';
+        const place = placeCol && r[placeCol] != null ? String(r[placeCol]).trim() : '';
+
+        const existing = parties.find(p => tight(p.name) === tight(name));
+        if(existing){
+          if(gstinOk){ existing.gstin = gstinRaw; existing.state = state || existing.state; }
+          if(address) existing.address = address;
+          if(pincode) existing.pincode = pincode;
+          if(place) existing.place = place;
+          updated++;
+        } else {
+          parties.push({ name, gstin: gstinOk ? gstinRaw : '', state: state || settings.state, alias:'', address, pincode, place });
+          added++;
+        }
+      });
+
+      save(); renderParties();
+      $('uploadPartiesBox').style.display = 'none';
+      toast(`${added} added, ${updated} updated` + (skippedBadGstin ? `, ${skippedBadGstin} had an unreadable GSTIN` : '') + '.');
+    }catch(err){
+      toast('Could not read that file: ' + (err.message || 'unknown error'));
+    }
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+$('pastePartiesBtn').addEventListener('click', () => { $('pastePartiesBox').style.display='block'; });
+$('pastePartiesCancel').addEventListener('click', () => { $('pastePartiesBox').style.display='none'; });
+$('pastePartiesGo').addEventListener('click', () => {
+  let n = 0;
+  splitPaste($('pastePartiesText').value).forEach(c => {
+    if(!c[0]) return;
+    parties.push({ name:c[0], gstin:c[1]||'', state:c[2]||settings.state, alias:c[3]||'',
+                   address:c[4]||'', pincode:c[5]||'', place:c[6]||'' }); n++;
+  });
+  $('pastePartiesText').value=''; $('pastePartiesBox').style.display='none';
+  save(); renderParties(); if(blocks) buildBills();
+  toast(n + ' parties added.');
+});
+
+$('saveSettings').addEventListener('click', () => {
+  ['company','gstin','state','vtype','godown','salesLocal18','salesInter18','salesLocal5','salesInter5','cgst','sgst','igst','round','roundMethod'].forEach(k => {
+    settings[k] = $('s_' + k).value.trim();
+  });
+  save(); if(blocks) buildBills();
+  $('saveSettings').textContent = 'Saved'; setTimeout(()=>{ $('saveSettings').textContent='Save settings'; }, 1400);
+});
+
+$('fullBackupBtn').addEventListener('click', () => {
+  download(JSON.stringify({ items, parties, rules, bundleRules, settings, exportLog }, null, 2),
+    `tallysync-backup-${stamp()}.json`, 'application/json');
+  toast('Full backup downloaded.');
+});
+$('fullRestoreBtn').addEventListener('click', () => $('restoreInput').click());
+$('restoreInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const p = JSON.parse(rd.result);
+      if(Array.isArray(p.items)) { items = p.items; selectedItems.clear(); }
+      if(Array.isArray(p.parties)) { parties = p.parties; selectedParties.clear(); }
+      if(p.rules) rules = Object.assign(rules, p.rules);
+      if(Array.isArray(p.bundleRules)) bundleRules = p.bundleRules;
+      if(p.settings) settings = Object.assign(settings, p.settings);
+      if(Array.isArray(p.exportLog)) exportLog = p.exportLog;
+      save(); renderAll(); if(blocks) buildBills();
+      toast('Backup restored.');
+    }catch(err){ toast('That file could not be read as a backup.'); }
+  };
+  rd.readAsText(f); e.target.value='';
+});
+$('clearLogBtn').addEventListener('click', () => {
+  askConfirm('Clear the export log? Duplicate bills will stop being flagged.', () => {
+    exportLog = []; save(); renderLog(); toast('Export log cleared.');
+  });
+});
+
+$('billDate').value = todayISO();
+load();
+</script>
+</body>
+</html>
