@@ -452,13 +452,13 @@ let saveWarned = false;
 async function save(){
   const payload = { rules, bundleRules, settings, items, parties, exportLog };
   try{
-    if(!window.storage || typeof window.storage.set !== 'function') throw new Error('no storage');
-    const r = await window.storage.set('jwnc_billbuilder', JSON.stringify(payload), false);
-    if(r === null) throw new Error('write refused');
+    localStorage.setItem('jwnc_billbuilder', JSON.stringify(payload));
     storageOK = true;
     renderStorageBanner();
     return true;
   }catch(e){
+    // Only fails in genuinely locked-down browsing (private/incognito with storage
+    // blocked, or a very old browser) — real hosting always has localStorage.
     storageOK = false;
     renderStorageBanner();
     if(!saveWarned){
@@ -473,16 +473,16 @@ function renderStorageBanner(){
   const el = document.getElementById('storageBanner');
   if(!el) return;
   el.innerHTML = storageOK === false ? `<div class="note bad">
-    <b>Nothing is being saved.</b> This copy can't reach persistent storage, so edits, deletions and
-    new items will all come back as soon as the page reloads. Use <b>Tally settings &rarr; Download full backup</b>
-    before you close this tab, and restore it next time. Building this tool inside a Claude chat gives you
-    saving that works across sessions.</div>` : '';
+    <b>Nothing is being saved.</b> This browser is blocking local storage (common in private/incognito
+    windows, or with strict privacy settings), so edits, deletions and new items will all come back as
+    soon as the page reloads. Use <b>Tally settings &rarr; Download full backup</b> before you close this
+    tab, and restore it next time — or reopen this page in a normal browser window.</div>` : '';
 }
 async function load(){
   try{
-    const r = await window.storage.get('jwnc_billbuilder', false);
-    if(r && r.value){
-      const p = JSON.parse(r.value);
+    const raw = localStorage.getItem('jwnc_billbuilder');
+    if(raw){
+      const p = JSON.parse(raw);
       if(p.rules) rules = Object.assign(rules, p.rules);
       if(p.bundleRules) bundleRules = p.bundleRules;
       if(p.settings) settings = Object.assign(settings, p.settings);
@@ -493,9 +493,9 @@ async function load(){
   }catch(e){}
   // Probe storage once at startup so the warning appears before any data is lost.
   try{
-    if(!window.storage || typeof window.storage.set !== 'function') throw new Error('no storage');
-    const t = await window.storage.set('jwnc_probe', '1', false);
-    storageOK = (t !== null);
+    localStorage.setItem('jwnc_probe', '1');
+    localStorage.removeItem('jwnc_probe');
+    storageOK = true;
   }catch(e){ storageOK = false; }
   renderAll();
   renderStorageBanner();
