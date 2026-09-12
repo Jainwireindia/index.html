@@ -509,7 +509,7 @@ function normCode(s){
   v = v.replace(/[\u2018\u2019\u201c\u201d]/g, "'").replace(/[\u00d7\u2715]/g,'x');
   v = v.replace(/\bhalf\s*inch\b/g,'1/2x1/2');
   v = v.replace(/(\d)\s*\/\s*(\d)/g,'$1/$2');       // 1 / 2 -> 1/2
-  v = v.replace(/\b0?\.5\b/g,'1/2');                  // .5 -> 1/2
+  v = v.replace(/(^|[^0-9])0?\.5(?![0-9])/g,'$11/2');  // .5 -> 1/2 (leaves 2.5 alone)
   v = v.replace(/\s*x\s*/g,'x');                      // 1 x 1 -> 1x1
   v = v.replace(/\blit\b/g,'lite').replace(/\bhvy\b/g,'heavy').replace(/\bblu\b/g,'blue');
   v = v.replace(/\bgauge\b/g,'g').replace(/(\d)\s*g(?=x|\s|$|[^a-z0-9])/g,'$1');   // 10g and 10gx3 -> 10
